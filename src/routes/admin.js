@@ -244,12 +244,15 @@ router.put('/bookings/:id/status', verifyRole(['Admin', 'Staff']), async (req, r
             .update(updateData)
             .eq('id', id);
 
-        if (error) throw error;
+        if (error) {
+            console.error(`Update Booking Status Error [ID: ${id}]:`, error.message);
+            throw error;
+        }
 
         res.json({ message: 'Booking status updated successfully' });
     } catch (error) {
         console.error('Update Booking Status Error:', error.message);
-        res.status(500).json({ error: 'Failed to update booking status' });
+        res.status(500).json({ error: `Failed to update booking status: ${error.message}` });
     }
 });
 
@@ -263,6 +266,8 @@ router.put('/bookings/:id/amount', verifyRole(['Admin', 'Staff']), async (req, r
     }
 
     try {
+        console.log(`Saving amount for booking ID: ${id}, Amount: ${amountToPay}`);
+
         // Fetch current payment_details to merge
         const { data: current, error: fetchError } = await supabase
             .from('bookings')
@@ -270,7 +275,10 @@ router.put('/bookings/:id/amount', verifyRole(['Admin', 'Staff']), async (req, r
             .eq('id', id)
             .single();
 
-        if (fetchError) throw fetchError;
+        if (fetchError) {
+            console.error(`Fetch Payment Details Error [ID: ${id}]:`, fetchError.message);
+            return res.status(404).json({ error: 'Booking not found or could not fetch payment details.' });
+        }
 
         const currentPayment = current?.payment_details || {};
         const updatedPayment = {
@@ -278,7 +286,7 @@ router.put('/bookings/:id/amount', verifyRole(['Admin', 'Staff']), async (req, r
             amountToPay: Number(amountToPay),
         };
 
-        const { error } = await supabase
+        const { error: updateError } = await supabase
             .from('bookings')
             .update({
                 payment_details: updatedPayment,
@@ -286,12 +294,15 @@ router.put('/bookings/:id/amount', verifyRole(['Admin', 'Staff']), async (req, r
             })
             .eq('id', id);
 
-        if (error) throw error;
+        if (updateError) {
+            console.error(`Update Amount Error [ID: ${id}]:`, updateError.message);
+            throw updateError;
+        }
 
         res.json({ message: 'Amount saved successfully' });
     } catch (error) {
         console.error('Save Amount Error:', error.message);
-        res.status(500).json({ error: 'Failed to save amount' });
+        res.status(500).json({ error: `Failed to save amount: ${error.message}` });
     }
 });
 

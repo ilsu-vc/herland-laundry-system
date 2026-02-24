@@ -56,4 +56,51 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Forgot Password
+router.post('/forgot-password', async (req, res) => {
+    const { email, phone } = req.body;
+    try {
+        if (email) {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: 'http://localhost:5173/reset-password',
+            });
+            if (error) throw error;
+            return res.status(200).json({ message: 'Password reset link sent to your email.' });
+        } else if (phone) {
+            // For phone, we send an OTP
+            let formattedPhone = phone.replace(/^0/, '+63');
+            if (!formattedPhone.startsWith('+')) formattedPhone = `+${formattedPhone}`;
+            
+            const { error } = await supabase.auth.signInWithOtp({
+                phone: formattedPhone,
+            });
+            if (error) throw error;
+            return res.status(200).json({ message: 'OTP sent to your mobile number.' });
+        } else {
+            return res.status(400).json({ error: 'Email or phone number is required.' });
+        }
+    } catch (err) {
+        console.error('Forgot Password Error:', err.message);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Reset Password (assuming user is authenticated via link/otp)
+router.post('/reset-password', async (req, res) => {
+    const { password, access_token } = req.body;
+    try {
+        const { data, error } = await supabase.auth.updateUser({
+            password: password
+        }, {
+            access_token: access_token
+        });
+        
+        if (error) throw error;
+        res.status(200).json({ message: 'Password updated successfully!' });
+    } catch (err) {
+        console.error('Reset Password Error:', err.message);
+        res.status(400).json({ error: err.message });
+    }
+});
+
 module.exports = router;

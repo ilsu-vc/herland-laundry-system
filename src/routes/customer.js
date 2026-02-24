@@ -200,4 +200,77 @@ router.post('/my-bookings/:id/payment-reference', requireAuth, async (req, res) 
     }
 });
 
+// ─── Profile Management ────────────────────────────────────────────────────────
+router.get('/profile', requireAuth, async (req, res) => {
+    try {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', req.user.id)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        res.json({
+            id: req.user.id,
+            email: req.user.email,
+            phone: req.user.phone, // Auth phone
+            full_name: profile?.full_name || '',
+            profile_phone: profile?.phone_number || '', // Profile table phone
+            role: profile?.role || 'Customer'
+        });
+    } catch (error) {
+        console.error('Fetch Profile Error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+});
+
+router.put('/profile', requireAuth, async (req, res) => {
+    const { name, phone, password } = req.body;
+
+    try {
+        // 1. Update Profile table
+        const profileUpdate = {};
+        if (name !== undefined) profileUpdate.full_name = name;
+        if (phone !== undefined) profileUpdate.phone_number = phone;
+
+        if (Object.keys(profileUpdate).length > 0) {
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update(profileUpdate)
+                .eq('id', req.user.id);
+
+            if (profileError) throw profileError;
+        }
+
+        // 2. Update Auth (Password/Phone if needed)
+        const authUpdate = {};
+        if (password) authUpdate.password = password;
+        
+        // If updating phone in auth, convert to E.164
+        if (phone) {
+            let e164Phone = String(phone);
+            if (e164Phone.startsWith('0')) {
+                e164Phone = '+63' + e164Phone.substring(1);
+            }
+            if (e164Phone.startsWith('+')) {
+                authUpdate.phone = e164Phone;
+            }
+        }
+
+        if (Object.keys(authUpdate).length > 0) {
+            const { error: authError } = await supabase.auth.updateUser(authUpdate);
+            if (authError) {
+                console.warn('Auth update warning:', authError.message);
+                if (password) throw authError;
+            }
+        }
+
+        res.json({ message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Update Profile Error:', error.message);
+        res.status(500).json({ error: `Failed to update profile: ${error.message}` });
+    }
+});
+
 module.exports = router;
