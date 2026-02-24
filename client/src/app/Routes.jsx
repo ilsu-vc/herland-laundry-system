@@ -19,6 +19,8 @@ import ManageServices from '../features/admin/ManageServices'
 import ManageUsers from '../features/admin/ManageUsers'
 import Reports from '../features/admin/Reports'
 import TempRoleSwitcher from '../shared/permissions/TempRoleSwitcher'
+import ForgotPassword from '../features/auth/ForgotPassword'
+import ResetPassword from '../features/auth/ResetPassword'
 
 function resolveNotificationsPathByRole() {
 	const activeRole = window.sessionStorage.getItem('activeRole')
@@ -57,6 +59,8 @@ export default function AppRoutes() {
 			<Route path="/role-switcher" element={<TempRoleSwitcher />} />
 			<Route path="/login" element={<Login />} />
 			<Route path="/signup" element={<Signup />} />
+			<Route path="/forgot-password" element={<ForgotPassword />} />
+			<Route path="/reset-password" element={<ResetPassword />} />
 			<Route path="/book" element={<BookNow />} />
 			<Route path="/payment" element={<PaymentForm />} />
 			<Route path="/bookings" element={resolveBookingsElementByRole()} />

@@ -168,14 +168,25 @@ export default function Login() {
             )}
 
             {/* Password input */}
-            <div className="flex items-center border border-[#3878c2] rounded px-3 py-2 mb-4">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full outline-none bg-transparent text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] placeholder:font-normal"
-              />
+            <div className="flex flex-col mb-4">
+              <div className="flex items-center border border-[#3878c2] rounded px-3 py-2">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full outline-none bg-transparent text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] placeholder:font-normal"
+                />
+              </div>
+              <div className="flex justify-end mt-1">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-xs font-semibold text-[#3878c2] hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
 
             {/* Auth error */}
