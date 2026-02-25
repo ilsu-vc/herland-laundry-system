@@ -126,34 +126,34 @@ const guestNavItems = [
 ];
 
 const userNavItems = [
-  { label: "Home", path: "/dashboard", icon: HOME_ICON },
-  { label: "Book Now", path: "/book", icon: BOOK_NOW_ICON },
-  { label: "Bookings", path: "/bookings", icon: BOOKINGS_ICON },
-  { label: "Notifications", path: "/user/notifications", icon: NOTIFICATIONS_ICON },
-  { label: "My Profile", path: "/profile", icon: USER_ICON },
+  { label: "Home", path: "/dashboard", icon: HOME_ICON, requiresAuth: true },
+  { label: "Book Now", path: "/book", icon: BOOK_NOW_ICON, requiresAuth: true },
+  { label: "Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
+  { label: "Notifications", path: "/user/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
+  { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
 ];
 
 const riderNavItems = [
-  { label: "Manage Bookings", path: "/bookings", icon: BOOKINGS_ICON },
-  { label: "Notifications", path: "/rider/notifications", icon: NOTIFICATIONS_ICON },
+  { label: "Manage Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
+  { label: "Notifications", path: "/rider/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
 ];
 
 const staffNavItems = [
-  { label: "Home", path: "/staff", icon: HOME_ICON },
-  { label: "Manage Bookings", path: "/staff", icon: BOOKINGS_ICON },
-  { label: "Notifications", path: "/staff/notifications", icon: NOTIFICATIONS_ICON },
-  { label: "My Profile", path: "/profile", icon: USER_ICON },
+  { label: "Home", path: "/staff", icon: HOME_ICON, requiresAuth: true },
+  { label: "Manage Bookings", path: "/staff", icon: BOOKINGS_ICON, requiresAuth: true },
+  { label: "Notifications", path: "/staff/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
+  { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
 ];
 
 const adminNavItems = [
-  { label: "Home", path: "/admin", icon: HOME_ICON },
-  { label: "Manage Bookings", path: "/admin/manage-bookings", icon: BOOKINGS_ICON },
-  { label: "Manage Employees", path: "/admin/manage-employees", icon: USER_ICON },
-  { label: "Manage Admins", path: "/admin/manage-admins", icon: USER_ICON },
-  { label: "Manage Services", path: "/admin/manage-services", icon: MANAGE_SERVICES_ICON },
-  { label: "Manage Users", path: "/admin/manage-users", icon: USER_ICON },
-  { label: "Reports", path: "/admin/reports", icon: REPORTS_ICON },
-  { label: "My Profile", path: "/profile", icon: USER_ICON },
+  { label: "Home", path: "/admin", icon: HOME_ICON, requiresAuth: true },
+  { label: "Manage Bookings", path: "/admin/manage-bookings", icon: BOOKINGS_ICON, requiresAuth: true },
+  { label: "Manage Employees", path: "/admin/manage-employees", icon: USER_ICON, requiresAuth: true },
+  { label: "Manage Admins", path: "/admin/manage-admins", icon: USER_ICON, requiresAuth: true },
+  { label: "Manage Services", path: "/admin/manage-services", icon: MANAGE_SERVICES_ICON, requiresAuth: true },
+  { label: "Manage Users", path: "/admin/manage-users", icon: USER_ICON, requiresAuth: true },
+  { label: "Reports", path: "/admin/reports", icon: REPORTS_ICON, requiresAuth: true },
+  { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
 ];
 
 const guestRoutes = ["/", "/landing", "/guest", "/login", "/signup", "/role-switcher"];

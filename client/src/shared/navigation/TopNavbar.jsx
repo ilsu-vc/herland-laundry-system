@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getRoleNavigation } from './navItems';
+import { supabase } from '../../lib/supabase';
 
 export default function TopNavbar({
   showBack = false,
@@ -12,7 +13,20 @@ export default function TopNavbar({
   const location = useLocation();
   const activeRole = window.sessionStorage.getItem('activeRole');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [session, setSession] = useState(null);
   const navItems = getRoleNavigation(location.pathname);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+    });
+
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      setSession(currentSession);
+    });
+
+    return () => authSubscription.unsubscribe();
+  }, []);
 
   const handleNavItemClick = (item) => {
     if (!item.sectionId) {
@@ -97,7 +111,7 @@ export default function TopNavbar({
               </button>
  
               <div className="flex-1 flex items-center justify-center gap-x-1 px-2">
-                {navItems.map((item) => (
+                {navItems.filter(item => !item.requiresAuth || session).map((item) => (
                   <button
                     key={`${item.label}-${item.path}`}
                     type="button"

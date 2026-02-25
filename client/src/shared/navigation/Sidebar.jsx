@@ -16,15 +16,17 @@ export default function Sidebar({
     const activeRole = window.sessionStorage.getItem('activeRole');
     const navItems = getRoleNavigation(location.pathname);
     const [userProfile, setUserProfile] = useState({ name: 'User', avatar: null });
+    const [session, setSession] = useState(null);
 
     const fetchUserProfile = useCallback(async () => {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            setSession(currentSession);
+            if (!currentSession) return;
 
             const response = await fetch(`${API_BASE}/profile`, {
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${currentSession.access_token}`,
                 },
             });
 
@@ -139,9 +141,9 @@ export default function Sidebar({
             <aside className={`hidden lg:block ${className}`}>
                 <div className="sticky top-20">
                     <div className="rounded-2xl bg-white p-2 shadow-sm border border-gray-100 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide pb-20">
-                        <ProfileSection />
+                        {session && <ProfileSection />}
                         <div className="space-y-1">
-                            {navItems.map((item) => {
+                            {navItems.filter(item => !item.requiresAuth || session).map((item) => {
                                 const isActive = isActivePath(item.path);
                                 return (
                                     <button
@@ -164,18 +166,20 @@ export default function Sidebar({
                                 );
                             })}
 
-                            <button
-                                type="button"
-                                onClick={handleLogout}
-                                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50 transition"
-                            >
-                                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-red-50 text-red-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                                    </svg>
-                                </span>
-                                <span className="whitespace-nowrap">Logout</span>
-                            </button>
+                            {session && (
+                                <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50 transition"
+                                >
+                                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-red-50 text-red-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                                        </svg>
+                                    </span>
+                                    <span className="whitespace-nowrap">Logout</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -208,11 +212,11 @@ export default function Sidebar({
                     />
                 </div>
 
-                <ProfileSection />
+                {session && <ProfileSection />}
 
                 {/* Menu */}
                 <nav className="py-2 space-y-1">
-                    {navItems.map((item) => (
+                    {navItems.filter(item => !item.requiresAuth || session).map((item) => (
                         <button
                             key={`${item.label}-${item.path}`}
                             onClick={() => handleNavItemClick(item)}
@@ -223,17 +227,19 @@ export default function Sidebar({
                         </button>
                     ))}
                     
-                    <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center gap-3 px-6 py-3 text-left text-red-600 font-semibold hover:bg-red-50 transition text-sm"
-                    >
-                        <span className="text-red-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                            </svg>
-                        </span>
-                        <span>Logout</span>
-                    </button>
+                    {session && (
+                        <button
+                            onClick={handleLogout}
+                            className="flex w-full items-center gap-3 px-6 py-3 text-left text-red-600 font-semibold hover:bg-red-50 transition text-sm"
+                        >
+                            <span className="text-red-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                                </svg>
+                            </span>
+                            <span>Logout</span>
+                        </button>
+                    )}
                 </nav>
             </div>
         </>
