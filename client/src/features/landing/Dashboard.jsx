@@ -183,12 +183,14 @@ export default function Dashboard() {
             <p className="text-lg text-[#b4b4b4]">
               No active bookings at the moment.
             </p>
-            <button 
-              onClick={() => navigate('/book')}
-              className="px-6 py-2 bg-[#3878c2] text-white rounded-full text-sm font-semibold hover:bg-[#2d609c] transition"
-            >
-              Book Now
-            </button>
+            {!['staff', 'rider', 'Staff', 'Rider'].includes(window.sessionStorage.getItem('activeRole')) && (
+              <button 
+                onClick={() => navigate('/book')}
+                className="px-6 py-2 bg-[#3878c2] text-white rounded-full text-sm font-semibold hover:bg-[#2d609c] transition"
+              >
+                Book Now
+              </button>
+            )}
           </div>
         ) : !loading && !error && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

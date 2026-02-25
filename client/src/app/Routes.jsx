@@ -21,6 +21,7 @@ import Reports from '../features/admin/Reports'
 import TempRoleSwitcher from '../shared/permissions/TempRoleSwitcher'
 import ForgotPassword from '../features/auth/ForgotPassword'
 import ResetPassword from '../features/auth/ResetPassword'
+import ManageAdmins from '../features/admin/ManageAdmins'
 
 function resolveNotificationsPathByRole() {
 	const activeRole = window.sessionStorage.getItem('activeRole')
@@ -53,6 +54,7 @@ export default function AppRoutes() {
 			<Route path="/admin" element={<AdminDashboard />} />
 			<Route path="/admin/manage-bookings" element={<ManageBookings />} />
 			<Route path="/admin/manage-employees" element={<ManageEmployees />} />
+			<Route path="/admin/manage-admins" element={<ManageAdmins />} />
 			<Route path="/admin/manage-services" element={<ManageServices />} />
 			<Route path="/admin/manage-users" element={<ManageUsers />} />
 			<Route path="/admin/reports" element={<Reports />} />
@@ -61,8 +63,22 @@ export default function AppRoutes() {
 			<Route path="/signup" element={<Signup />} />
 			<Route path="/forgot-password" element={<ForgotPassword />} />
 			<Route path="/reset-password" element={<ResetPassword />} />
-			<Route path="/book" element={<BookNow />} />
-			<Route path="/payment" element={<PaymentForm />} />
+			<Route 
+				path="/book" 
+				element={
+					['Staff', 'Rider'].includes(window.sessionStorage.getItem('activeRole')) 
+						? <Navigate to={window.sessionStorage.getItem('activeRole') === 'Staff' ? '/staff' : '/rider'} replace /> 
+						: <BookNow />
+				} 
+			/>
+			<Route 
+				path="/payment" 
+				element={
+					['Staff', 'Rider'].includes(window.sessionStorage.getItem('activeRole')) 
+						? <Navigate to={window.sessionStorage.getItem('activeRole') === 'Staff' ? '/staff' : '/rider'} replace /> 
+						: <PaymentForm />
+				} 
+			/>
 			<Route path="/bookings" element={resolveBookingsElementByRole()} />
 			<Route path="/bookings/:bookingId" element={<BookingDetails />} />
 			<Route path="/notifications" element={<NotificationsRoleRedirect />} />

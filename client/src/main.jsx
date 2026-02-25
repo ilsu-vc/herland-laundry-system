@@ -19,23 +19,31 @@ function AppShell() {
   const { hideBottomNav } = useLayout()
 
   useEffect(() => {
+    // Only update activeRole if we are specifically on a root dashboard path
+    // and don't already have a valid role session, or to sync with the current section.
     if (location.pathname.startsWith('/staff')) {
-      window.sessionStorage.setItem('activeRole', 'staff')
+      window.sessionStorage.setItem('activeRole', 'Staff')
       return
     }
 
     if (location.pathname.startsWith('/rider')) {
-      window.sessionStorage.setItem('activeRole', 'rider')
+      window.sessionStorage.setItem('activeRole', 'Rider')
       return
     }
 
-    if (
-      location.pathname.startsWith('/user') ||
-      location.pathname.startsWith('/dashboard') ||
-      location.pathname.startsWith('/book') ||
-      location.pathname.startsWith('/profile')
-    ) {
-      window.sessionStorage.setItem('activeRole', 'user')
+    if (location.pathname.startsWith('/admin')) {
+      window.sessionStorage.setItem('activeRole', 'Admin')
+      return
+    }
+
+    // If on a user/auth path and no role is set, default to user
+    const isUserPath = location.pathname.startsWith('/user') || 
+                      location.pathname.startsWith('/dashboard') || 
+                      location.pathname.startsWith('/book') || 
+                      location.pathname.startsWith('/profile');
+                      
+    if (isUserPath && !window.sessionStorage.getItem('activeRole')) {
+      window.sessionStorage.setItem('activeRole', 'Customer')
     }
   }, [location.pathname])
 

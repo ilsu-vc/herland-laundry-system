@@ -36,7 +36,7 @@ export function FilterSelect({
 	value,
 	onChange,
 	options = [],
-	className = 'h-10 w-full border border-gray-300 rounded-md px-3 text-sm',
+	className = 'h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white',
 	...rest
 }) {
 	return (

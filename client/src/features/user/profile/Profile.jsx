@@ -17,6 +17,7 @@ export default function Profile() {
     phone: "",
     email: "",
     password: "",
+    avatar_url: null,
   });
 
   const fetchProfile = useCallback(async () => {
@@ -42,7 +43,8 @@ export default function Profile() {
           lastName: names.slice(1).join(" ") || "",
           phone: data.profile_phone || data.phone || "",
           email: data.email || "",
-          password: "", // Never show existing password
+          password: "", 
+          avatar_url: data.avatar_url,
         });
       }
     } catch (error) {
@@ -60,6 +62,63 @@ export default function Profile() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleAvatarUpload = async (e) => {
+    try {
+      setUploading(true);
+      setFeedback({ type: "", message: "" });
+
+      if (!e.target.files || e.target.files.length === 0) {
+        throw new Error('You must select an image to upload.');
+      }
+
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const { data: { user } } = await supabase.auth.getUser();
+      // Use folder-based path: userId/random-uuid.ext
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // 1. Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 2. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // 3. Update Profile via Backend
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${API_BASE}/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
+
+      if (response.ok) {
+        setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+        setFeedback({ type: "success", message: "Profile picture updated!" });
+        // Notify other components
+        window.dispatchEvent(new Event('profileUpdated'));
+      } else {
+        throw new Error("Failed to update profile picture in database.");
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      setFeedback({ type: "error", message: error.message || "Upload failed." });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -92,6 +151,8 @@ export default function Profile() {
 
       if (response.ok) {
         setFeedback({ type: "success", message: "Profile updated successfully!" });
+        // Notify other components
+        window.dispatchEvent(new Event('profileUpdated'));
         setFormData(prev => ({ ...prev, password: "" })); // Clear password field
         setTimeout(() => setFeedback({ type: "", message: "" }), 3000);
       } else {
@@ -151,22 +212,47 @@ export default function Profile() {
         )}
 
         <div className="text-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#eaf2fb] text-[#3878c2]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-10 w-10"
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative group">
+              <div className="flex h-32 w-32 items-center justify-center rounded-full bg-[#eaf2fb] text-[#3878c2] overflow-hidden border-4 border-[#eaf2fb] shadow-sm">
+                {formData.avatar_url ? (
+                  <img src={formData.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="h-16 w-16"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+                {uploading && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                  </div>
+                )}
+              </div>
+              
+              <label 
+                className={`absolute bottom-0 right-0 h-10 w-10 flex items-center justify-center rounded-full bg-[#3878c2] text-white cursor-pointer shadow-md hover:bg-[#2d609c] transition-colors ${uploading ? 'pointer-events-none opacity-50' : ''}`}
+                title="Change Profile Picture"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z"
-                  clipRule="evenodd"
-                />
-              </svg>
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploading} />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                </svg>
+              </label>
             </div>
-            <p className="text-sm font-semibold text-[#3878c2]">{formData.firstName} {formData.lastName}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-lg font-bold text-[#3878c2]">{formData.firstName} {formData.lastName}</p>
+              <p className="text-xs text-gray-500 font-medium">{formData.email}</p>
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 text-left md:grid-cols-2">

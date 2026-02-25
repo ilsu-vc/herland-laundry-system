@@ -38,13 +38,13 @@ export default function BottomNavbar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:px-4 sm:pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:hidden">
+    <div className="fixed bottom-0 left-0 z-50 w-full px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:px-4 sm:pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:hidden">
       <div className="mx-auto w-full max-w-lg sm:max-w-xl md:max-w-4xl lg:max-w-5xl">
-        <div className="flex items-center justify-between gap-1 bg-[#63bce6] px-2 py-2 text-white shadow-lg sm:px-3">
+        <div className="flex items-center justify-start sm:justify-center gap-2 bg-[#63bce6] px-4 py-2 text-white shadow-lg sm:px-3 rounded-2xl overflow-x-auto scrollbar-hide scroll-smooth">
           {navItems.map((item) => (
             <button
               key={`${item.label}-${item.path}`}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[10px] sm:text-[11px] font-semibold transition-colors ${
+              className={`shrink-0 min-w-[70px] flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 text-[10px] sm:text-[11px] font-semibold transition-colors ${
                 isActivePath(item.path) ? 'bg-white/20' : 'hover:bg-white/10'
               }`}
               onClick={() => handleNavItemClick(item)}

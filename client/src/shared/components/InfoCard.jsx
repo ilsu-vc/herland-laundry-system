@@ -54,15 +54,16 @@ export default function InfoCard({
                     name="name"
                     value={editData?.name || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Name"
                   />
                   <select
                     name="role"
                     value={editData?.role || 'Staff'}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                   >
+                    <option value="Admin">Admin</option>
                     <option value="Staff">Staff</option>
                     <option value="Rider">Rider</option>
                     <option value="Customer">Customer (move to Users)</option>
@@ -71,14 +72,14 @@ export default function InfoCard({
                     name="phone"
                     value={editData?.phone || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Phone"
                   />
                   <input
                     name="email"
                     value={editData?.email || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Email"
                   />
 
@@ -131,7 +132,7 @@ export default function InfoCard({
                     name="name"
                     value={editData?.name || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Name"
                   />
                   <div className="flex flex-col gap-1">
@@ -156,28 +157,28 @@ export default function InfoCard({
                     name="id"
                     value={editData?.id || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="ID"
                   />
                   <input
                     name="address"
                     value={editData?.address || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Address"
                   />
                   <input
                     name="phone"
                     value={editData?.phone || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Phone"
                   />
                   <input
                     name="password"
                     value={editData?.password || ''}
                     onChange={onInputChange}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2]"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Password"
                   />
                   <div className="flex gap-2 mt-2">

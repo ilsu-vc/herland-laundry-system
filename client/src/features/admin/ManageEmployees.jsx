@@ -205,7 +205,7 @@ import { supabase } from '../../lib/supabase';
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by ID, name, or access type"
-            className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151]"
+            className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151] bg-white"
           />
 
           <FilterSelect
@@ -214,13 +214,14 @@ import { supabase } from '../../lib/supabase';
             onChange={(e) => setFilterRole(e.target.value)}
             options={[
               { value: 'all', label: 'All Access Types' },
+              { value: 'Admin', label: 'Admin Access' },
               { value: 'Staff', label: 'Staff Access' },
               { value: 'Rider', label: 'Rider Access' },
             ]}
-            className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm"
+            className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white"
           />
 
-          <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1">
+          <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1 bg-white">
             <p className="whitespace-nowrap text-xs font-semibold text-[#3878c2]">Sort by Employee ID</p>
             <div className="flex items-center gap-1.5">
               <RadioRow

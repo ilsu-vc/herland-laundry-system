@@ -139,21 +139,38 @@ const riderNavItems = [
 ];
 
 const staffNavItems = [
+  { label: "Home", path: "/staff", icon: HOME_ICON },
   { label: "Manage Bookings", path: "/staff", icon: BOOKINGS_ICON },
   { label: "Notifications", path: "/staff/notifications", icon: NOTIFICATIONS_ICON },
+  { label: "My Profile", path: "/profile", icon: USER_ICON },
 ];
 
 const adminNavItems = [
+  { label: "Home", path: "/admin", icon: HOME_ICON },
   { label: "Manage Bookings", path: "/admin/manage-bookings", icon: BOOKINGS_ICON },
   { label: "Manage Employees", path: "/admin/manage-employees", icon: USER_ICON },
+  { label: "Manage Admins", path: "/admin/manage-admins", icon: USER_ICON },
   { label: "Manage Services", path: "/admin/manage-services", icon: MANAGE_SERVICES_ICON },
   { label: "Manage Users", path: "/admin/manage-users", icon: USER_ICON },
   { label: "Reports", path: "/admin/reports", icon: REPORTS_ICON },
+  { label: "My Profile", path: "/profile", icon: USER_ICON },
 ];
 
 const guestRoutes = ["/", "/landing", "/guest", "/login", "/signup", "/role-switcher"];
 
+export function getNavigationByRole(role) {
+  const normalizedRole = (role || '').toLowerCase();
+  if (normalizedRole === 'admin') return adminNavItems;
+  if (normalizedRole === 'staff') return staffNavItems;
+  if (normalizedRole === 'rider') return riderNavItems;
+  return userNavItems;
+}
+
 export function getRoleNavigation(pathname = "") {
+  // Check storage first if available in this context
+  const activeRole = window.sessionStorage.getItem('activeRole');
+  if (activeRole) return getNavigationByRole(activeRole);
+
   if (pathname.startsWith("/admin")) return adminNavItems;
   if (pathname.startsWith("/rider")) return riderNavItems;
   if (pathname.startsWith("/staff")) return staffNavItems;

@@ -10,6 +10,7 @@ export default function TopNavbar({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const activeRole = window.sessionStorage.getItem('activeRole');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navItems = getRoleNavigation(location.pathname);
 
@@ -42,7 +43,7 @@ export default function TopNavbar({
 
   return (
     <div className={`sticky top-0 z-50 ${className}`}>
-      <div className="navbar bg-base-100 w-full max-w-6xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 shadow-sm flex items-center">
+      <div className="navbar bg-base-100 w-full max-w-[1400px] mx-auto px-5 sm:px-6 md:px-8 xl:px-10 shadow-sm flex items-center">
         <div className="flex-1 flex items-center">
         {showBack ? (
           <button
@@ -80,12 +81,12 @@ export default function TopNavbar({
                 className="h-10"
               />
             </button>
-
+ 
             <div className="hidden w-full lg:flex lg:items-center">
               <button
                 type="button"
                 onClick={() => navigate('/landing')}
-                className="btn btn-ghost px-0"
+                className="btn btn-ghost px-0 shrink-0"
                 aria-label="Go to landing page"
               >
                 <img
@@ -94,14 +95,14 @@ export default function TopNavbar({
                   className="h-10"
                 />
               </button>
-
-              <div className="flex-1 flex items-center justify-evenly px-4 xl:px-10">
+ 
+              <div className="flex-1 flex items-center justify-center gap-x-1 px-2">
                 {navItems.map((item) => (
                   <button
                     key={`${item.label}-${item.path}`}
                     type="button"
                     onClick={() => handleNavItemClick(item)}
-                    className="btn btn-ghost text-[#3878c2]"
+                    className="btn btn-ghost text-[#3878c2] px-2 text-[13px] whitespace-nowrap"
                   >
                     {item.label}
                   </button>

@@ -5,6 +5,7 @@ import BottomNavbar from '../../shared/navigation/BottomNavbar';
 const menuItems = [
 	{ label: 'Manage Bookings', path: '/admin/manage-bookings' },
 	{ label: 'Manage Employees', path: '/admin/manage-employees' },
+	{ label: 'Manage Admins', path: '/admin/manage-admins' },
 	{ label: 'Manage Services', path: '/admin/manage-services' },
 	{ label: 'Manage Users', path: '/admin/manage-users' },
 	{ label: 'Reports', path: '/admin/reports' },
