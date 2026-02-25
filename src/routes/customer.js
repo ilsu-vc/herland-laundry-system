@@ -25,6 +25,17 @@ router.post('/book', requireAuth, async (req, res) => {
     }
 
     try {
+        // Fetch user role to verify they are a Customer
+        const { data: profile, error: roleError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', req.user.id)
+            .single();
+
+        if (roleError || !profile || (profile.role !== 'Customer' && profile.role !== 'Admin')) {
+            return res.status(403).json({ error: 'Only customers can create bookings.' });
+        }
+
         const nowIso = new Date().toISOString();
 
         // Build a human-readable service_type string
@@ -217,7 +228,8 @@ router.get('/profile', requireAuth, async (req, res) => {
             phone: req.user.phone, // Auth phone
             full_name: profile?.full_name || '',
             profile_phone: profile?.phone_number || '', // Profile table phone
-            role: profile?.role || 'Customer'
+            role: profile?.role || 'Customer',
+            avatar_url: profile?.avatar_url || null
         });
     } catch (error) {
         console.error('Fetch Profile Error:', error.message);
@@ -233,6 +245,7 @@ router.put('/profile', requireAuth, async (req, res) => {
         const profileUpdate = {};
         if (name !== undefined) profileUpdate.full_name = name;
         if (phone !== undefined) profileUpdate.phone_number = phone;
+        if (req.body.avatar_url !== undefined) profileUpdate.avatar_url = req.body.avatar_url;
 
         if (Object.keys(profileUpdate).length > 0) {
             const { error: profileError } = await supabase
