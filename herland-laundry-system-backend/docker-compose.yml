@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: herland-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      # Sync the local src code to the container's /app directory
+      - ./:/app
+      # Prevent the host's local node_modules from overriding the container's
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
