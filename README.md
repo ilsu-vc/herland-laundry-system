@@ -76,6 +76,13 @@ A modern, full-stack laundry management web application designed for seamless cu
    npm run dev
    ```
 
+### 4. Database Migration
+To ensure all features (Rider Assignment, Feedback, etc.) work correctly, you must update your Supabase schema:
+1. Open your **Supabase Dashboard**.
+2. Go to the **SQL Editor**.
+3. Copy the contents of [`database_migration.sql`](file:///c:/Users/Lance/Documents/GitHub/herland-laundry-system/database_migration.sql).
+4. Paste and **Run** the script.
+
 ---
 
 ## 📖 How to Use
