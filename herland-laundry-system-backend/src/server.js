@@ -91,6 +91,28 @@ app.post('/api/v1/auth/login', async (req, res) => {
 // 3. Booking
 app.post('/api/v1/bookings', requireAuth, async (req, res) => {
     const { userId, serviceType, schedule } = req.body;
+
+    // ─── Double Booking Prevention ──────────────────────────────────────────────
+    if (schedule) {
+        const { data: existing, error: checkError } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('schedule', schedule)
+            .neq('status', 'cancelled')
+            .maybeSingle();
+
+        if (checkError) {
+            console.error('Check double booking error:', checkError);
+        }
+
+        if (existing) {
+            return res.status(400).json({ 
+                error: 'This time slot is already booked. Please choose another time.' 
+            });
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     const { data, error } = await supabase
         .from('bookings')
         .insert([{ user_id: userId, service_type: serviceType, status: 'pending', schedule }])

@@ -7,7 +7,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 /**
  * @route   GET /api/v1/rider/assigned-bookings
- * @desc    Get bookings assigned to the logged-in rider
+ * @desc    Get bookings explicitly assigned to the logged-in rider (Accepted)
  * @access  Rider
  */
 router.get('/assigned-bookings', verifyRole('Rider'), async (req, res) => {
@@ -27,64 +27,146 @@ router.get('/assigned-bookings', verifyRole('Rider'), async (req, res) => {
         if (userIds.length > 0) {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, full_name')
+                .select('id, full_name, address')
                 .in('id', userIds);
 
             if (!profileError && profiles) {
-                profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.full_name]));
+                profilesMap = Object.fromEntries(profiles.map(p => [p.id, { full_name: p.full_name, address: p.address }]));
             }
         }
 
-        const mapped = (data || []).map(b => ({
-            ...b,
-            customerName: profilesMap[b.user_id] || 'Unknown Customer'
-        }));
+        const mapped = (data || []).map(b => {
+            const profile = profilesMap[b.user_id] || {};
+            return {
+                ...b,
+                customerName: profile.full_name || 'Unknown Customer',
+                customerAddress: profile.address || ''
+            };
+        });
 
         res.json(mapped);
     } catch (error) {
-        console.error('Rider Fetch Bookings Error:', error.message);
+        console.error('Rider Fetch Assigned Bookings Error:', error.message);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 /**
- * @route   GET /api/v1/rider/accepted-bookings
- * @desc    Get all bookings that have been accepted and are ready for rider action
+ * @route   GET /api/v1/rider/available-bookings
+ * @desc    Get bookings waiting for a rider that haven't been declined by the user
  * @access  Rider
  */
-router.get('/accepted-bookings', verifyRole('Rider'), async (req, res) => {
+router.get('/available-bookings', verifyRole('Rider'), async (req, res) => {
     try {
+        // Fetch bookings that are in 'Delivery in Progress' and have no rider
         const { data, error } = await supabase
             .from('bookings')
             .select('*')
-            .eq('status', 'Booking Accepted')
+            .eq('status', 'Delivery in Progress')
+            .is('rider_id', null)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
+        // Filter out bookings declined by this rider
+        // We look into the 'declined_by' jsonb array if it exists, or just filter in memory for now
+        // if the column doesn't exist yet. Assumption: Column may not exist, so we'll be defensive.
+        const filtered = (data || []).filter(b => {
+            if (!b.declined_by || !Array.isArray(b.declined_by)) return true;
+            return !b.declined_by.includes(req.user.id);
+        });
+
         // Fetch profiles for customer names
-        const userIds = [...new Set((data || []).map(b => b.user_id).filter(Boolean))];
+        const userIds = [...new Set(filtered.map(b => b.user_id).filter(Boolean))];
         let profilesMap = {};
 
         if (userIds.length > 0) {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, full_name')
+                .select('id, full_name, address')
                 .in('id', userIds);
 
             if (!profileError && profiles) {
-                profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.full_name]));
+                profilesMap = Object.fromEntries(profiles.map(p => [p.id, { full_name: p.full_name, address: p.address }]));
             }
         }
 
-        const mapped = (data || []).map(b => ({
-            ...b,
-            customerName: profilesMap[b.user_id] || 'Unknown Customer'
-        }));
+        const mapped = filtered.map(b => {
+            const profile = profilesMap[b.user_id] || {};
+            return {
+                ...b,
+                customerName: profile.full_name || 'Unknown Customer',
+                customerAddress: profile.address || ''
+            };
+        });
 
         res.json(mapped);
     } catch (error) {
-        console.error('Rider Fetch Accepted Bookings Error:', error.message);
+        console.error('Rider Fetch Available Bookings Error:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+/**
+ * @route   PATCH /api/v1/rider/accept/:id
+ * @desc    Accept a booking assignment
+ * @access  Rider
+ */
+router.patch('/accept/:id', verifyRole('Rider'), async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { data, error } = await supabase
+            .from('bookings')
+            .update({ rider_id: req.user.id })
+            .eq('id', id)
+            .is('rider_id', null)
+            .select();
+
+        if (error) throw error;
+        if (data.length === 0) {
+            return res.status(400).json({ error: 'Booking already assigned or not found' });
+        }
+
+        res.json({ message: 'Booking accepted successfully', booking: data[0] });
+    } catch (error) {
+        console.error('Rider Accept Error:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+/**
+ * @route   PATCH /api/v1/rider/decline/:id
+ * @desc    Decline a booking assignment
+ * @access  Rider
+ */
+router.patch('/decline/:id', verifyRole('Rider'), async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Fetch current declined_by array
+        const { data: current, error: fetchError } = await supabase
+            .from('bookings')
+            .select('declined_by')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const declinedBy = Array.isArray(current.declined_by) ? current.declined_by : [];
+        if (!declinedBy.includes(req.user.id)) {
+            declinedBy.push(req.user.id);
+        }
+
+        const { data, error } = await supabase
+            .from('bookings')
+            .update({ declined_by: declinedBy })
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        res.json({ message: 'Booking declined successfully' });
+    } catch (error) {
+        console.error('Rider Decline Error:', error.message);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

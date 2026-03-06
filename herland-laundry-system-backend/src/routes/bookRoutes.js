@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../config/supabase');
+const notificationService = require('../services/notificationService');
 
 // Create a booking
 router.post('/', async (req, res) => {
@@ -15,10 +16,7 @@ router.post('/', async (req, res) => {
         if (error) return res.status(500).json({ error: error.message });
 
         // Create a notification for the booking
-        await supabase.from('notifications').insert([{
-            user_id: userId,
-            message: `New booking for ${serviceType} confirmed!`
-        }]);
+        notificationService.notify(userId, 'BOOKING_CREATED', data[0].reference_number || data[0].id);
 
         res.status(201).json(data);
     } catch (err) {

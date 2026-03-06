@@ -8,6 +8,7 @@ import BookingHistory from '../features/user/bookings/BookingHistory'
 import BookingDetails from '../features/user/bookings/BookingDetails'
 import Notifications from '../shared/inbox/Notifications'
 import Profile from '../features/user/profile/Profile'
+import DigitalReceipt from '../features/user/bookings/DigitalReceipt'
 import LandingPage from '../features/landing/LandingPage'
 import Dashboard from '../features/landing/Dashboard'
 import RiderDashboard from '../features/rider/RiderDashboard'
@@ -81,6 +82,7 @@ export default function AppRoutes() {
 			/>
 			<Route path="/bookings" element={resolveBookingsElementByRole()} />
 			<Route path="/bookings/:bookingId" element={<BookingDetails />} />
+			<Route path="/bookings/:bookingId/receipt" element={<DigitalReceipt />} />
 			<Route path="/notifications" element={<NotificationsRoleRedirect />} />
 			<Route path="/user/notifications" element={<Notifications />} />
 			<Route path="/staff/notifications" element={<Notifications />} />

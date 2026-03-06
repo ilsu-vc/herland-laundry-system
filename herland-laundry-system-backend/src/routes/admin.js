@@ -6,26 +6,28 @@ const { verifyRole } = require('../middleware/auth');
 // Route: Get total revenue and booking counts
 router.get('/dashboard-stats', verifyRole('Admin'), async (req, res) => {
     try {
-        // 1. Fetch all bookings that are 'delivered' (completed)
+        // 1. Fetch all bookings
         const { data: bookings, error } = await supabase
             .from('bookings')
-            .select('service_type, weight, status');
+            .select('status, payment_details');
 
         if (error) throw error;
 
-        // 2. Simple logic to calculate stats (Assuming a flat rate for this example)
-        const totalBookings = bookings.length;
-        const completedBookings = bookings.filter(b => b.status === 'delivered').length;
+        // 2. Filter out cancelled bookings for general stats
+        const activeBookings = bookings.filter(b => b.status !== 'cancelled');
+        const completedBookings = bookings.filter(b => b.status === 'delivered' || b.status === 'completed');
         
-        // Example: $5 per kg calculation
-        const estimatedRevenue = bookings
-            .filter(b => b.status === 'delivered')
-            .reduce((sum, b) => sum + (b.weight * 5), 0);
+        // 3. Calculate revenue from completed bookings
+        const totalRevenue = completedBookings.reduce((sum, b) => {
+            const amount = b.payment_details?.totalAmount || 0;
+            return sum + Number(amount);
+        }, 0);
 
         res.json({
-            total_bookings: totalBookings,
-            completed_bookings: completedBookings,
-            estimated_revenue: `₱${estimatedRevenue.toFixed(2)}`
+            total_bookings: activeBookings.length,
+            completed_bookings: completedBookings.length,
+            estimated_revenue: totalRevenue,
+            formatted_revenue: `₱${totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         });
 
     } catch (error) {

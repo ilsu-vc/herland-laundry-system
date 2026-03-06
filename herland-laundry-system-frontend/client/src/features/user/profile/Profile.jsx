@@ -18,6 +18,7 @@ export default function Profile() {
     email: "",
     password: "",
     avatar_url: null,
+    address: "",
   });
 
   const fetchProfile = useCallback(async () => {
@@ -45,6 +46,7 @@ export default function Profile() {
           email: data.email || "",
           password: "", 
           avatar_url: data.avatar_url,
+          address: data.address || "",
         });
       }
     } catch (error) {
@@ -132,6 +134,7 @@ export default function Profile() {
       const payload = {
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         phone: formData.phone,
+        address: formData.address,
       };
 
       if (formData.password) {
@@ -288,6 +291,19 @@ export default function Profile() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                className="w-full rounded-xl bg-[#f5f9fd] px-3 py-3 text-sm font-semibold text-[#3878c2] outline-none border border-transparent focus:border-[#3878c2]/30"
+              />
+            </div>
+
+            {/* Address */}
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-xs font-medium text-gray-500 ml-1">Address</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Enter your exact address for delivery"
                 className="w-full rounded-xl bg-[#f5f9fd] px-3 py-3 text-sm font-semibold text-[#3878c2] outline-none border border-transparent focus:border-[#3878c2]/30"
               />
             </div>

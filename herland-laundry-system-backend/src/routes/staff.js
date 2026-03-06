@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { verifyRole } = require('../middleware/auth');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const notificationService = require('../services/notificationService');
 
 // Route: Update booking status (e.g., pending -> washing -> ready)
 router.patch('/update-status/:id', verifyRole('staff'), async (req, res) => {
@@ -11,7 +12,7 @@ router.patch('/update-status/:id', verifyRole('staff'), async (req, res) => {
     const { new_status } = req.body; // Get the new status from the frontend
 
     // 1. List of valid statuses to prevent accidental typos in the database
-    const validStatuses = ['pending', 'picked_up', 'washing', 'ready', 'delivered'];
+    const validStatuses = ['pending', 'picked_up', 'washing', 'ready', 'Delivery in Progress', 'delivered'];
 
     if (!validStatuses.includes(new_status)) {
         return res.status(400).json({ error: 'Invalid status update' });
@@ -22,20 +23,28 @@ router.patch('/update-status/:id', verifyRole('staff'), async (req, res) => {
         const { data, error } = await supabase
             .from('bookings')
             .update({ status: new_status })
-            .eq('id', id) // Ensure we only update the booking with this specific ID
-            .select();
+            .eq('id', id)
+            .select('*, profiles(full_name)')
+            .single();
 
         if (error) throw error;
-
-        if (data.length === 0) {
-            return res.status(404).json({ error: 'Booking not found' });
-        }
+        if (!data) return res.status(404).json({ error: 'Booking not found' });
 
         // 3. Success response
         res.json({
             message: `Order status successfully updated to ${new_status}`,
-            updatedBooking: data[0]
+            updatedBooking: data
         });
+
+        // 4. Send Notification
+        let eventType = 'UPDATE';
+        if (new_status === 'picked_up') eventType = 'BOOKING_ACCEPTED';
+        else if (new_status === 'washing') eventType = 'WASHING';
+        else if (new_status === 'ready') eventType = 'READY';
+        else if (new_status === 'Delivery in Progress') eventType = 'DELIVERY';
+        else if (new_status === 'delivered') eventType = 'COMPLETED';
+
+        notificationService.notify(data.user_id, eventType, data.reference_number || data.id);
 
     } catch (error) {
         console.error('Staff Update Error:', error.message);

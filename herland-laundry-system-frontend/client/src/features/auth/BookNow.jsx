@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLayout } from "../../app/LayoutContext";
 import { usePermissions } from "../../shared/permissions/UsePermissions";
 import DateTimePicker from "../../shared/components/DateTimePicker";
@@ -10,11 +10,32 @@ import { formatDate, formatTime, getRouteAddresses } from "../../shared/utils/fo
    Parent Component
 ========================= */
 export default function BookNow() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [services, setServices] = useState({ wash: 0, dry: 0, fold: 0 });
-  const [addons, setAddons] = useState({ detergent: 0, conditioner: 0 });
+
+  // Auth Check
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert("Please sign up or log in to create a booking.");
+        navigate('/signup?redirect=book');
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+  const [services, setServices] = useState({});
+  const [addons, setAddons] = useState({});
   const [weight, setWeight] = useState(0);
+  const [availableServices, setAvailableServices] = useState([]);
+  const [availableAddons, setAvailableAddons] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("gcash");
+  const [notes, setNotes] = useState("");
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const isEditMode = !!editId;
+
   const { setHideBottomNav } = useLayout();
   const { requestLocationPermission } = usePermissions();
   const [collectionInfo, setCollectionInfo] = useState({
@@ -27,7 +48,91 @@ export default function BookNow() {
     date: "",
     time: "09:00",
   });
-  const prices = { wash: 60, dry: 65, fold: 30 };
+
+  // Fetch available services and add-ons from backend
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        setLoadingServices(true);
+        const response = await fetch("http://localhost:5000/api/v1/customer/services");
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableServices(data.services || []);
+          setAvailableAddons(data.addOns || []);
+          
+          // Initialize state if not in edit mode
+          if (!isEditMode) {
+            const initialServices = {};
+            data.services.forEach(s => initialServices[s.name.toLowerCase()] = 0);
+            setServices(initialServices);
+
+            const initialAddons = {};
+            data.addOns.forEach(a => initialAddons[a.name.toLowerCase()] = 0);
+            setAddons(initialAddons);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching services metadata:", err);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+    fetchMetadata();
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode && !loadingServices) {
+      const fetchBooking = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          const response = await fetch(`http://localhost:5000/api/v1/customer/my-bookings/${editId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.status.toLowerCase() !== "pending") {
+              alert("Only pending bookings can be edited.");
+              navigate("/bookings");
+              return;
+            }
+            // Hydrate state
+            // Merge with available items to ensure all keys exist
+            const mergedServices = {};
+            availableServices.forEach(s => {
+              const key = s.name.toLowerCase();
+              mergedServices[key] = data.serviceDetails.services?.[key] || 0;
+            });
+            setServices(mergedServices);
+
+            const mergedAddons = {};
+            availableAddons.forEach(a => {
+              const key = a.name.toLowerCase();
+              mergedAddons[key] = data.serviceDetails.addons?.[key] || 0;
+            });
+            setAddons(mergedAddons);
+
+            setWeight(data.serviceDetails.weight || 0);
+            setPaymentMethod(data.paymentDetails.method === "GCash" ? "gcash" : "cash");
+            setNotes(data.notes || "");
+            setCollectionInfo({
+              option: data.collectionDetails.option,
+              optionLabel: data.collectionDetails.optionLabel,
+              date: data.collectionDetails.collectionDate,
+              time: data.collectionDetails.collectionTime,
+            });
+            setDeliveryInfo({
+              date: data.collectionDetails.deliveryDate,
+              time: data.collectionDetails.deliveryTime,
+            });
+          }
+        } catch (err) {
+          console.error("Error fetching booking for edit:", err);
+        }
+      };
+      fetchBooking();
+    }
+  }, [isEditMode, editId]);
 
   const steps = [
     "Select Services",
@@ -128,7 +233,9 @@ export default function BookNow() {
         {step === 1 && (
           <StepSelectServices
             onNext={() => handleStepChange(2)}
-            prices={prices}
+            availableServices={availableServices}
+            availableAddons={availableAddons}
+            loading={loadingServices}
             services={services}
             setServices={setServices}
             addons={addons}
@@ -159,13 +266,18 @@ export default function BookNow() {
         {step === 4 && (
           <StepReview
             onBack={() => setStep(3)}
-            prices={prices}
+            availableServices={availableServices}
+            availableAddons={availableAddons}
             services={services}
             addons={addons}
             weight={weight}
             paymentMethod={paymentMethod}
             collectionInfo={collectionInfo}
             deliveryInfo={deliveryInfo}
+            notes={notes}
+            setNotes={setNotes}
+            isEditMode={isEditMode}
+            editId={editId}
           />
         )}
       </div>
@@ -178,7 +290,9 @@ export default function BookNow() {
 ========================= */
 function StepSelectServices({
   onNext,
-  prices,
+  availableServices,
+  availableAddons,
+  loading,
   services,
   setServices,
   addons,
@@ -207,7 +321,7 @@ function StepSelectServices({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 pr-2">
             <h3 className="font-semibold text-[#3878c2]">{title}</h3>
-            <p className="text-xs text-[#3878c2]">₱{price} per load</p>
+            <p className="text-xs text-[#3878c2]">₱{price.toFixed(2)} per load</p>
           </div>
           <button
             onClick={onToggle}
@@ -233,6 +347,14 @@ function StepSelectServices({
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3878c2]"></div>
+      </div>
+    );
+  }
+
   return (
     <>
     <div className="px-0 sm:px-2">
@@ -241,24 +363,15 @@ function StepSelectServices({
       </h2>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <ServiceCard
-          title="Wash"
-          price={prices.wash}
-          value={services.wash}
-          onToggle={() => toggleService("wash")}
-        />
-        <ServiceCard
-          title="Dry"
-          price={prices.dry}
-          value={services.dry}
-          onToggle={() => toggleService("dry")}
-        />
-        <ServiceCard
-          title="Fold"
-          price={prices.fold}
-          value={services.fold}
-          onToggle={() => toggleService("fold")}
-        />
+        {availableServices.map((s) => (
+          <ServiceCard
+            key={s.id}
+            title={s.name}
+            price={s.currentPrice}
+            value={services[s.name.toLowerCase()]}
+            onToggle={() => toggleService(s.name.toLowerCase())}
+          />
+        ))}
       </div>
 
       {/* Add-Ons */}
@@ -268,23 +381,17 @@ function StepSelectServices({
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         <div className="lg:col-span-1">
-          <AddonRow
-            label="Detergent"
-            value={addons.detergent}
-            onChange={(v) =>
-              setAddons((prev) => ({ ...prev, detergent: Math.max(0, Math.floor(v)) }))
-            }
-            allowDecimal={false} // integers only
-          />
-
-          <AddonRow
-            label="Fabric Conditioner"
-            value={addons.conditioner}
-            onChange={(v) =>
-              setAddons((prev) => ({ ...prev, conditioner: Math.max(0, Math.floor(v)) }))
-            }
-            allowDecimal={false} // integers only
-          />
+          {availableAddons.map((a) => (
+            <AddonRow
+              key={a.id}
+              label={a.name}
+              value={addons[a.name.toLowerCase()]}
+              onChange={(v) =>
+                setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
+              }
+              allowDecimal={false}
+            />
+          ))}
         </div>
 
         {/* Laundry Weight */}
@@ -806,34 +913,54 @@ function StepAddress({ onBack, onNext }) {
 
 function StepReview({
   onBack,
-  services = { wash: 0, dry: 0, fold: 0 },
-  addons = { detergent: 0, conditioner: 0 },
+  services = {},
+  addons = {},
   weight = 0,
-  prices = { wash: 60, dry: 65, fold: 30 },
+  availableServices = [],
+  availableAddons = [],
   paymentMethod = "gcash",
   collectionInfo = { optionLabel: "-", date: "", time: "" },
   deliveryInfo = { date: "", time: "" },
+  notes,
+  setNotes,
+  isEditMode,
+  editId,
 }) {
   const navigate = useNavigate();
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("success");
-  const [referenceNumber, setReferenceNumber] = useState("");
-  const [paymentReference, setPaymentReference] = useState("");
-  const [notes, setNotes] = useState("");
+   const [referenceNumber, setReferenceNumber] = useState("");
+   const [paymentReference, setPaymentReference] = useState("");
+
+  const calculateTotal = () => {
+    let total = 0;
+    // Base services
+    availableServices.forEach(s => {
+      if (services[s.name.toLowerCase()]) {
+        total += s.currentPrice;
+      }
+    });
+    
+    // Add-ons
+    availableAddons.forEach(a => {
+      const qty = Number(addons[a.name.toLowerCase()]) || 0;
+      if (qty > 0) {
+        total += a.currentPrice * qty;
+      }
+    });
+
+    return total; 
+  };
+
+  const calculateDownpayment = () => {
+    return calculateTotal() * 0.25;
+  };
 
   const generateReferenceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
     const randomPart = Math.floor(1000 + Math.random() * 9000);
     return `HL-${timestamp}-${randomPart}`;
   };
-
-  const formatBookingDate = (iso) =>
-    new Date(iso).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).replace(/\s/g, " ");
-
 
   return (
     <div className="text-[#3878c2] bg-[#ffffff] min-h-screen px-0 py-4 sm:px-2">
@@ -844,27 +971,33 @@ function StepReview({
         <div className="p-4 border rounded bg-[#ffffff] shadow-sm">
           <h3 className="font-semibold mb-2">Services Selected</h3>
           <ul className="list-disc list-inside text-sm">
-            {services.wash ? <li>Wash (₱{prices.wash} per load)</li> : null}
-            {services.dry ? <li>Dry (₱{prices.dry} per load)</li> : null}
-            {services.fold ? <li>Fold (₱{prices.fold} per load)</li> : null}
-            {!services.wash && !services.dry && !services.fold && <li>None</li>}
+            {availableServices.filter(s => services[s.name.toLowerCase()]).map(s => (
+              <li key={s.id}>{s.name} (₱{s.currentPrice.toFixed(2)} per load)</li>
+            ))}
+            {availableServices.filter(s => services[s.name.toLowerCase()]).length === 0 && <li>None</li>}
           </ul>
+
+          <h4 className="font-semibold mt-4 mb-1">Price Breakdown</h4>
+          <div className="text-sm space-y-1">
+            <div className="flex justify-between">
+              <span>Total Estimated:</span>
+              <span className="font-bold">₱{calculateTotal().toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-[#4bad40]">
+              <span>25% Downpayment:</span>
+              <span className="font-bold">₱{calculateDownpayment().toFixed(2)}</span>
+            </div>
+          </div>
 
           {/* Add-Ons */}
           <h4 className="font-semibold mt-4 mb-1">Add-Ons</h4>
-          {(addons.detergent || addons.conditioner) ? (
+          {availableAddons.filter(a => Number(addons[a.name.toLowerCase()]) > 0).length > 0 ? (
             <ul className="list-disc list-inside text-sm">
-              {addons.detergent ? (
-                <li>
-                  Detergent: {formatAddonQuantity("detergent", addons.detergent)} pcs
+              {availableAddons.filter(a => Number(addons[a.name.toLowerCase()]) > 0).map(a => (
+                <li key={a.id}>
+                  {a.name}: {addons[a.name.toLowerCase()]} pcs (₱{(a.currentPrice * addons[a.name.toLowerCase()]).toFixed(2)})
                 </li>
-              ) : null}
-              {addons.conditioner ? (
-                <li>
-                  Fabric Conditioner: {" "}
-                  {formatAddonQuantity("conditioner", addons.conditioner)} pcs
-                </li>
-              ) : null}
+              ))}
             </ul>
           ) : (
             <div className="text-sm">None</div>
@@ -940,7 +1073,7 @@ function StepReview({
         </button>
         <button
           onClick={async () => {
-            const nextReference = generateReferenceNumber();
+            const nextReference = isEditMode ? editId : generateReferenceNumber();
             const nextPaymentReference = "";
 
             // Build the booking payload
@@ -963,6 +1096,8 @@ function StepReview({
                 addons,
                 selectedAddons,
                 weight,
+                availableServices, // Cache prices for historical accuracy
+                availableAddons,
               },
               collection_details: {
                 option: collectionInfo.option || "dropOffPickUpLater",
@@ -978,6 +1113,10 @@ function StepReview({
                 method: paymentMethod === "gcash" ? "GCash" : "Cash",
                 referenceNumber: paymentMethod === "gcash" ? "" : "-",
                 status: paymentMethod === "gcash" ? "For confirmation" : "Pay on collection",
+                totalAmount: calculateTotal(),
+                downpaymentRequired: calculateDownpayment(),
+                amountToPay: calculateDownpayment(), // For GCash initial payment
+                balance: calculateTotal() - calculateDownpayment(),
               },
               notes: notes || "",
             };
@@ -986,8 +1125,14 @@ function StepReview({
               const { data: { session } } = await supabase.auth.getSession();
               const token = session?.access_token;
 
-              const response = await fetch("http://localhost:5000/api/v1/customer/book", {
-                method: "POST",
+              const url = isEditMode 
+                ? `http://localhost:5000/api/v1/customer/my-bookings/${editId}/update` 
+                : "http://localhost:5000/api/v1/customer/book";
+              
+              const method = isEditMode ? "PATCH" : "POST";
+
+              const response = await fetch(url, {
+                method,
                 headers: {
                   "Content-Type": "application/json",
                   ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -997,13 +1142,20 @@ function StepReview({
 
               if (response.ok) {
                 const result = await response.json();
-                const ref = result.booking?.reference_number || nextReference;
+                const ref = isEditMode ? editId : (result.booking?.reference_number || nextReference);
+                
+                if (isEditMode) {
+                  alert("Booking updated successfully.");
+                  navigate(`/bookings/${editId}`);
+                  return;
+                }
+
                  setBookingStatus("success");
                  setReferenceNumber(ref);
                  setPaymentReference(nextPaymentReference);
                } else {
                 const errData = await response.json().catch(() => ({}));
-                console.error("Booking failed:", errData.error || response.statusText);
+                console.error("Booking request failed:", errData.error || response.statusText);
                 setBookingStatus("error");
                 setReferenceNumber("");
                 setPaymentReference("");
@@ -1019,7 +1171,7 @@ function StepReview({
           }}
           className="px-4 py-2 rounded text-white bg-[#4bad40]"
         >
-          Confirm Booking
+          {isEditMode ? "Update Booking" : "Confirm Booking"}
         </button>
       </div>
 
@@ -1083,7 +1235,8 @@ function StepReview({
                      state: {
                        bookingReference: referenceNumber,
                        paymentReference,
-                       amountToPay: 0, // New bookings start with 0 amount to pay until admin sets it
+                       amountToPay: calculateDownpayment(), 
+                       isDownpayment: true,
                      },
                    });
                    return;

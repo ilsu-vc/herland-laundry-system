@@ -12,6 +12,9 @@ export default function BookingDetails() {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState("");
 
   const fetchBooking = useCallback(async () => {
     try {
@@ -54,6 +57,85 @@ export default function BookingDetails() {
   useEffect(() => {
     fetchBooking();
   }, [fetchBooking]);
+
+  const handleCancel = async () => {
+    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/my-bookings/${bookingId}/cancel`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        alert("Booking cancelled successfully.");
+        fetchBooking();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to cancel booking.");
+      }
+    } catch (err) {
+      console.error("Error cancelling booking:", err);
+      alert("An error occurred. Please try again.");
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/book?edit=${bookingId}`);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (feedbackRating === 0) {
+      alert("Please select a rating.");
+      return;
+    }
+
+    try {
+      setSubmittingFeedback(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/my-bookings/${bookingId}/feedback`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating: feedbackRating,
+          comment: feedbackComment,
+        }),
+      });
+
+      if (response.ok) {
+        alert("Feedback submitted successfully. Thank you!");
+        fetchBooking();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to submit feedback.");
+      }
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
 
   // Derive timeline — if the booking has a delivery option, add the appropriate pending steps
   const buildFullTimeline = (bk) => {
@@ -159,6 +241,32 @@ export default function BookingDetails() {
             </svg>
           </button>
           <h1 className="text-2xl font-semibold">Booking Details</h1>
+          <div className="ml-auto flex gap-2">
+            {booking?.status?.toLowerCase() !== "cancelled" && (
+              <button
+                onClick={() => navigate(`/bookings/${bookingId}/receipt`)}
+                className="rounded-lg border border-[#4bad40] px-3 py-1.5 text-sm font-medium text-[#4bad40] hover:bg-[#4bad40]/5 transition"
+              >
+                View Receipt
+              </button>
+            )}
+            {booking?.status?.toLowerCase() === "pending" && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="rounded-lg border border-[#3878c2] px-3 py-1.5 text-sm font-medium text-[#3878c2] hover:bg-[#3878c2]/5 transition"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="rounded-lg border border-[#e55353] px-3 py-1.5 text-sm font-medium text-[#e55353] hover:bg-[#e55353]/5 transition"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
         </header>
 
         {/* Reference Number */}
@@ -212,7 +320,7 @@ export default function BookingDetails() {
                     {booking?.serviceDetails?.selectedAddons?.length > 0 ? (
                       booking.serviceDetails.selectedAddons.map((addon) => (
                         <li key={addon.name}>
-                          {addon.name}: {addon.quantity * 2} pcs
+                          {addon.name}: {addon.quantity} pcs
                         </li>
                       ))
                     ) : (
@@ -296,17 +404,24 @@ export default function BookingDetails() {
                     {booking?.paymentDetails?.status || "Pending"}
                   </span>
                 </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs font-semibold uppercase text-[#b4b4b4]">
-                    Amount to Pay
-                  </p>
-                  <p className="mt-1 text-2xl font-bold text-[#4bad40]">
-                    ₱
-                    {booking?.paymentDetails?.amountToPay?.toFixed(2) || "0.00"}
-                  </p>
+                <div className="sm:col-span-2 space-y-3 mt-2 border-t border-[#f0f0f0] pt-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-[#b4b4b4] font-semibold uppercase text-xs">Total Amount</span>
+                    <span className="font-bold text-[#374151]">₱{booking?.paymentDetails?.totalAmount?.toFixed(2) || "0.00"}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-[#b4b4b4] font-semibold uppercase text-xs">Downpayment Paid</span>
+                    <span className="font-bold text-[#4bad40]">₱{booking?.paymentDetails?.downpaymentRequired?.toFixed(2) || "0.00"}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-dashed border-[#d9e8fb] pt-2">
+                    <span className="text-[#3878c2] font-bold uppercase text-xs">Remaining Balance</span>
+                    <span className="text-2xl font-black text-[#3878c2]">
+                      ₱{(booking?.paymentDetails?.balance || 0).toFixed(2)}
+                    </span>
+                  </div>
                   {booking?.paymentDetails?.method === "GCash" && (
                     <p className="mt-1 text-xs text-[#b4b4b4]">
-                      Kindly settle payment via GCash once verified.
+                      Balance to be settled upon collection.
                     </p>
                   )}
                 </div>
@@ -322,6 +437,82 @@ export default function BookingDetails() {
                 <p className="text-sm text-[#374151] italic">
                   "{booking.notes}"
                 </p>
+              </div>
+            )}
+
+            {/* Feedback Section */}
+            {(booking?.status?.toLowerCase() === "delivered" || booking?.status?.toLowerCase() === "completed" || booking?.status === "Booking Completed") && (
+              <div className="rounded-2xl border border-[#3878c2]/20 bg-white p-6 shadow-sm">
+                <h3 className="mb-4 text-lg font-semibold text-[#3878c2]">
+                  Your Experience
+                </h3>
+                
+                {booking.feedback ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill={star <= booking.feedback.rating ? "#facc15" : "#e5e7eb"}
+                          className="size-5"
+                        >
+                          <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                        </svg>
+                      ))}
+                    </div>
+                    {booking.feedback.comment && (
+                      <p className="text-sm text-[#374151] italic">
+                        "{booking.feedback.comment}"
+                      </p>
+                    )}
+                    <p className="text-[10px] text-[#b4b4b4] uppercase font-bold mt-1">
+                      Submitted on {formatDate(booking.feedback.submitted_at)}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-[#374151]">
+                      How was our service? Your feedback helps us improve!
+                    </p>
+                    
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className="focus:outline-none transition-transform hover:scale-110"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill={star <= feedbackRating ? "#facc15" : "#e5e7eb"}
+                            className="size-8"
+                          >
+                            <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      value={feedbackComment}
+                      onChange={(e) => setFeedbackComment(e.target.value)}
+                      placeholder="Share your thoughts (optional)..."
+                      className="w-full rounded-xl border border-[#d9e8fb] p-3 text-sm focus:border-[#3878c2] focus:ring-1 focus:ring-[#3878c2] outline-none min-h-[100px]"
+                    />
+
+                    <button
+                      onClick={handleSubmitFeedback}
+                      disabled={submittingFeedback || feedbackRating === 0}
+                      className="w-full rounded-xl bg-[#3878c2] py-3 text-sm font-bold text-white shadow-md hover:bg-[#2d62a3] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      {submittingFeedback ? "Submitting..." : "Submit Review"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

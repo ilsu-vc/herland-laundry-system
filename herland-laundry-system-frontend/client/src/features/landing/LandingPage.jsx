@@ -90,6 +90,9 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [openRate, setOpenRate] = useState(null);
   const [isWideDesktop, setIsWideDesktop] = useState(false);
+  const [dynamicRates, setDynamicRates] = useState([]);
+  const [loadingRates, setLoadingRates] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
   const { setHideBottomNav } = useLayout();
 
@@ -97,6 +100,63 @@ export default function LandingPage() {
     setHideBottomNav(true);
     return () => setHideBottomNav(false);
   }, [setHideBottomNav]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+    checkAuth();
+
+    const fetchRates = async () => {
+      try {
+        setLoadingRates(true);
+        const response = await fetch('http://localhost:5000/api/v1/customer/services');
+        if (response.ok) {
+          const data = await response.json();
+          // Transform fetched services and addons into categories
+          const services = data.services || [];
+          const addons = data.addOns || [];
+
+          // For the landing page UI, we group them into 'Services' and 'Add-ons'
+          const formatted = [
+            {
+              name: 'LAUNDRY SERVICES',
+              items: services.map(s => ({
+                title: s.name,
+                description: 'Professional cleaning & processing',
+                price: s.currentPrice
+              }))
+            },
+            {
+              name: 'POPULAR ADD-ONS',
+              items: addons.map(a => ({
+                title: a.name,
+                description: 'Extra care for your items',
+                price: a.currentPrice
+              }))
+            }
+          ];
+          setDynamicRates(formatted);
+        }
+      } catch (err) {
+        console.error('Error fetching rates for landing:', err);
+      } finally {
+        setLoadingRates(false);
+      }
+    };
+    fetchRates();
+  }, []);
+
+  const handleBookNow = () => {
+    if (isLoggedIn) {
+      navigate('/book');
+    } else {
+      if (window.confirm('You need to sign up or log in to create a booking. Would you like to sign up now?')) {
+        navigate('/signup?redirect=book');
+      }
+    }
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1500px)');
@@ -133,8 +193,8 @@ export default function LandingPage() {
               no queues, no stress, just dependable service at your fingertips.
             </p>
             <button
-              className="w-full sm:w-auto bg-[#4bad40] text-white px-10 py-3.5 rounded-full font-semibold"
-              onClick={() => navigate('/login')}
+              className="w-full sm:w-auto bg-[#4bad40] text-white px-10 py-3.5 rounded-full font-semibold shadow-lg hover:scale-105 transition-transform"
+              onClick={handleBookNow}
             >
               Book Now
             </button>
@@ -157,65 +217,78 @@ export default function LandingPage() {
           Service Rates
         </h2>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {serviceRates.map((service, index) => (
-            <div
-              key={service.name}
-              className={`rounded-xl border border-[#3878c2] p-5 transition-all ${
-                isWideDesktop || openRate === index ? 'bg-[#63bce6]/10' : ''
-              }`}
-            >
-              {isWideDesktop ? (
-                <div className="text-[#3878c2] font-semibold text-lg">
-                  {service.name}
-                </div>
-              ) : (
-                <button
-                  onClick={() =>
-                    setOpenRate(openRate === index ? null : index)
-                  }
-                  className="w-full flex justify-between items-center text-[#3878c2] font-semibold text-lg"
-                >
-                  {service.name}
-                  <span
-                    className={`text-[#4bad40] transform transition-transform ${
-                      openRate === index ? 'rotate-180' : ''
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-              )}
-
-              {(isWideDesktop || openRate === index) && (
-                <>
-                  <hr className="my-4 border-[#3878c2]" />
-
-                  <div className="space-y-4">
-                    {service.items.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-start gap-4"
-                      >
-                        <div>
-                          <p className="text-[#3878c2] font-medium">
-                            {item.title}
-                          </p>
-                          <p className="text-sm text-[#3878c2]/80">
-                            {item.description}
-                          </p>
-                        </div>
-                        <div className="font-semibold text-[#3878c2] whitespace-nowrap">
-                          ₱{service.price}
-                        </div>
-                      </div>
-                    ))}
+        {loadingRates ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3878c2]"></div>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            {dynamicRates.map((category, index) => (
+              <div
+                key={category.name}
+                className={`rounded-xl border border-[#3878c2] p-5 transition-all ${
+                  isWideDesktop || openRate === index ? 'bg-[#63bce6]/10' : ''
+                }`}
+              >
+                {isWideDesktop ? (
+                  <div className="text-[#3878c2] font-semibold text-lg">
+                    {category.name}
                   </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+                ) : (
+                  <button
+                    onClick={() =>
+                      setOpenRate(openRate === index ? null : index)
+                    }
+                    className="w-full flex justify-between items-center text-[#3878c2] font-semibold text-lg"
+                  >
+                    {category.name}
+                    <span
+                      className={`text-[#4bad40] transform transition-transform ${
+                        openRate === index ? 'rotate-180' : ''
+                      }`}
+                    >
+                      ▼
+                    </span>
+                  </button>
+                )}
+
+                {(isWideDesktop || openRate === index) && (
+                  <>
+                    <hr className="my-4 border-[#3878c2]" />
+
+                    <div className="space-y-4">
+                      {category.items.map((item, i) => (
+                        <div
+                          key={i}
+                          className="flex justify-between items-start gap-4"
+                        >
+                          <div>
+                            <p className="text-[#3878c2] font-medium">
+                              {item.title}
+                            </p>
+                            <p className="text-sm text-[#3878c2]/80">
+                              {item.description}
+                            </p>
+                          </div>
+                          <div className="font-semibold text-[#3878c2] whitespace-nowrap">
+                            ₱{item.price.toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <button
+                      onClick={handleBookNow}
+                      className="mt-8 w-full rounded-full bg-[#3878c2] py-3 text-sm font-bold text-white shadow-md hover:bg-[#2d62a3] transition-all"
+                    >
+                      Book with this rate
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* FAQ Section */}
