@@ -590,7 +590,7 @@ export default function ManageServices() {
                   value={serviceDraft.name}
                   onChange={(event) => handleItemDraftChange('service', 'name', event.target.value)}
                   placeholder="Service name"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                 />
                 <input
                   type="number"
@@ -601,7 +601,7 @@ export default function ManageServices() {
                     handleItemDraftChange('service', 'currentPrice', event.target.value)
                   }
                   placeholder="Price"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                 />
                 <button
                   type="button"
@@ -620,11 +620,11 @@ export default function ManageServices() {
               </div>
               <div className="space-y-4">
                 {services.map((s) => (
-                  <div key={s.id} className="flex items-center rounded-xl border border-gray-100 px-3 py-3">
+                  <div key={s.id} className="flex items-center rounded-xl border border-gray-100 px-3 py-3 ">
                     <span className="flex-[1.5] text-left text-sm font-semibold text-gray-800">
                       {s.name}
                     </span>
-                    <span className="flex-1 text-left text-sm font-semibold text-[#3878c2]">
+                    <span className="flex-1 text-left text-sm font-semibold text-[#3878c2] ">
                       ₱{s.currentPrice.toFixed(2)}
                     </span>
                     <span className="flex-1 text-left text-sm font-medium text-gray-400">
@@ -707,13 +707,13 @@ export default function ManageServices() {
           <section className="rounded-2xl border border-[#3878c2]/20 bg-white p-5 shadow-sm">
             <h2 className="mb-5 text-lg font-semibold text-[#3878c2]">Add-Ons</h2>
             <div className="w-full">
-              <div className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 sm:grid-cols-[1.6fr_1fr_auto]">
+              <div className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 sm:grid-cols-[1.6fr_1fr_auto] ">
                 <input
                   type="text"
                   value={addOnDraft.name}
                   onChange={(event) => handleItemDraftChange('addon', 'name', event.target.value)}
                   placeholder="Add-on name"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                 />
                 <input
                   type="number"
@@ -724,7 +724,7 @@ export default function ManageServices() {
                     handleItemDraftChange('addon', 'currentPrice', event.target.value)
                   }
                   placeholder="Price"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                 />
                 <button
                   type="button"
@@ -900,14 +900,14 @@ export default function ManageServices() {
                 value={faqDraft.question}
                 onChange={(event) => handleFaqInputChange('question', event.target.value)}
                 placeholder="FAQ question"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
               />
               <textarea
                 value={faqDraft.answer}
                 onChange={(event) => handleFaqInputChange('answer', event.target.value)}
                 placeholder="FAQ answer"
                 rows={3}
-                className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
               />
               <div className="flex items-center gap-2">
                 <button
@@ -1077,7 +1077,7 @@ export default function ManageServices() {
                     onChange={(event) =>
                       setEditItem((prev) => ({ ...prev, currentPrice: Number(event.target.value) }))
                     }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                   />
                 </div>
               ) : (
@@ -1090,7 +1090,7 @@ export default function ManageServices() {
                       onChange={(event) =>
                         setEditItem((prev) => ({ ...prev, opens: event.target.value }))
                       }
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                     />
                   </div>
                   <div>
@@ -1101,7 +1101,7 @@ export default function ManageServices() {
                       onChange={(event) =>
                         setEditItem((prev) => ({ ...prev, closes: event.target.value }))
                       }
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none bg-white"
                     />
                   </div>
                 </div>

@@ -288,7 +288,7 @@ function StepSelectServices({
 
         {/* Laundry Weight */}
         <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
-          <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
+          <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2 ">
             Laundry Weight
             <br />
             (in kg)
@@ -410,7 +410,7 @@ function QuantityInput({ value, onChange, allowDecimal }) {
         onBlur={handleBlur}
         type="text"
         className="w-full h-10 text-center border-y outline-none"
-        style={{ borderColor: "#3878c2", color: "#3878c2" }}
+        style={{ borderColor: "#3878c2", color: "#3878c2", backgroundColor: "white"}}
       />
 
       <button
@@ -591,7 +591,7 @@ function StepCollection({
               type="text"
               value={autofill[option].collection}
               readOnly
-              className="w-full p-2.5 rounded border border-default-medium text-[#3878c2] bg-neutral-secondary-medium"
+              className="w-full p-2.5 rounded border border-default-medium text-[#3878c2] bg-neutral-secondary-medium bg-white"
             />
           </div>
         </div>
@@ -627,7 +627,7 @@ function StepCollection({
               type="text"
               value={autofill[option].delivery}
               readOnly
-              className="w-full p-2.5 rounded border border-default-medium text-[#3878c2] bg-neutral-secondary-medium"
+              className="w-full p-2.5 rounded border border-default-medium text-[#3878c2] bg-neutral-secondary-medium bg-white"
             />
           </div>
         </div>
@@ -974,7 +974,7 @@ function StepReview({
             placeholder="Notes or requests for your laundry"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            className="w-full p-2 border rounded text-[#b4b4b4] placeholder-[#b4b4b4] focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
+            className="w-full p-2 border rounded text-[#b4b4b4] placeholder-[#b4b4b4] focus:outline-none focus:ring-1 focus:ring-[#3878c2] bg-white"
             rows={3}
           />
         </div>

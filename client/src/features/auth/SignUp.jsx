@@ -140,7 +140,7 @@ export default function Signup() {
               value={formData.firstName}
               onChange={handleChange}
               placeholder="First Name"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -152,7 +152,7 @@ export default function Signup() {
               value={formData.lastName}
               onChange={handleChange}
               placeholder="Last Name"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -164,7 +164,7 @@ export default function Signup() {
               value={formData.phoneNumber}
               onChange={handleChange}
               placeholder="Phone Number"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -176,7 +176,7 @@ export default function Signup() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Email Address (optional)"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -188,7 +188,7 @@ export default function Signup() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Password"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
             <span
               onClick={() => setShowPassword(!showPassword)}
@@ -252,7 +252,7 @@ export default function Signup() {
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="Confirm Password"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
             <span
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}

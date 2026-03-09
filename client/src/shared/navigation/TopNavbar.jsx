@@ -42,7 +42,7 @@ export default function TopNavbar({
 
   return (
     <div className={`sticky top-0 z-50 ${className}`}>
-      <div className="navbar bg-base-100 w-full max-w-6xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 shadow-sm flex items-center">
+      <div className="navbar bg-white w-full max-w-6xl mx-auto px-5 sm:px-6 md:px-8 xl:px-12 shadow-sm flex items-center">
         <div className="flex-1 flex items-center">
         {showBack ? (
           <button

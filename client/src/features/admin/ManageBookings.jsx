@@ -428,7 +428,7 @@ export default function ManageBookings() {
           </div>
         </header>
 
-        <div className="mb-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_160px_minmax(240px,auto)] md:items-center md:gap-3">
+        <div className="mb-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_160px_minmax(240px,auto)] md:items-center md:gap-3 ">
             <label htmlFor="booking-search" className="sr-only">
               Search by reference number or customer name
             </label>
@@ -438,7 +438,7 @@ export default function ManageBookings() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search reference # or customer"
-              className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0"
+              className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0 bg-white"
             />
 
             <FilterSelect
@@ -452,7 +452,7 @@ export default function ManageBookings() {
                   label: getStatusMeta(key).label,
                 })),
               ]}
-              className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm"
+              className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white"
             />
 
             <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1">
@@ -672,7 +672,7 @@ export default function ManageBookings() {
                               }));
                             }}
                             placeholder="Enter total amount"
-                            className={`h-10 w-full rounded-md border border-[#b4b4b4] px-3 text-sm ${
+                            className={`h-10 w-full rounded-md border border-[#b4b4b4] px-3 text-sm bg-white ${
                               isPaymentConfirmed ? "cursor-not-allowed bg-gray-100 text-gray-500" : "text-[#374151]"
                             }`}
                           />

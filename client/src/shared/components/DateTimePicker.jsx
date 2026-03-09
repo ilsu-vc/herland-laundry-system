@@ -50,7 +50,7 @@ export default function DateTimePicker({
 				onChange={(event) => onChange(event.target.value)}
 				min={min}
 				max={max}
-				className={`${isDate ? "date-input" : "time-input"} block w-full ps-3 pe-9 py-2.5 bg-neutral-secondary-medium border border-[#3878c2] text-[#3878c2] text-sm rounded-lg focus:outline-none focus:ring-[#3878c2] focus:border-[#3878c2]`}
+				className={`${isDate ? "date-input" : "time-input"} block w-full ps-3 pe-9 py-2.5 bg-white border border-[#3878c2] text-[#3878c2] text-sm rounded-lg focus:outline-none focus:ring-[#3878c2] focus:border-[#3878c2]`}
 				required={required}
 			/>
 		</div>

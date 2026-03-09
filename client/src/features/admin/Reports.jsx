@@ -411,7 +411,7 @@ export default function Reports() {
                 label: report.label,
                 disabled: false
               }))}
-              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none"
+              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none bg-white"
             />
           </div>
 
@@ -446,7 +446,7 @@ export default function Reports() {
                 { value: 'weekly', label: 'Weekly' },
                 { value: 'monthly', label: 'Monthly' },
               ]}
-              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
+              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 bg-white"
             />
           </div>
         </div>

@@ -217,7 +217,7 @@ export default function ManageUsers() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search user id, name, or phone"
-            className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0"
+            className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0 bg-white"
           />
 
           <FilterSelect
@@ -231,7 +231,7 @@ export default function ManageUsers() {
                 label: monthYear,
               })),
             ]}
-            className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm"
+            className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white"
           />
 
           <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1">
