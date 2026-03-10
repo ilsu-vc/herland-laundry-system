@@ -140,6 +140,17 @@ export default function DigitalReceipt() {
                 <td className="py-4 text-right font-medium text-[#1f2937]">---</td>
               </tr>
             ))}
+            {booking.serviceDetails?.numberOfBags && (
+              <tr>
+                <td className="py-4 pr-4 capitalize text-[#374151]">
+                  <div className="font-semibold">Total Loads/Bags</div>
+                  {booking.serviceDetails.bagDescription && (
+                    <div className="text-xs text-[#9ca3af]">Description: {booking.serviceDetails.bagDescription}</div>
+                  )}
+                </td>
+                <td className="py-4 text-right font-bold text-[#1f2937]">{booking.serviceDetails.numberOfBags}</td>
+              </tr>
+            )}
           </tbody>
         </table>
 

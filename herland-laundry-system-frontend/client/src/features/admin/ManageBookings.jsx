@@ -15,6 +15,9 @@ import { STATUS_ORDER, getStatusKey, getStatusMeta } from '../../shared/componen
 import { FilterSelect, RadioRow } from '../../shared/components/OptionInput';
 import VerticalStepper from '../../shared/components/VerticalStepper';
 import { supabase } from '../../lib/supabase';
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+
+const mapLibraries = ["places"];
 
 const API_BASE = 'http://localhost:5000/api/v1/admin';
 
@@ -155,6 +158,8 @@ const getCollectionDetails = (booking) => ({
   collectionTime: booking.collectionDetails?.collectionTime || "",
   deliveryDate: booking.collectionDetails?.deliveryDate || "",
   deliveryTime: booking.collectionDetails?.deliveryTime || "",
+  lat: booking.collectionDetails?.lat || null,
+  lng: booking.collectionDetails?.lng || null,
 });
 
 const getPaymentDetails = (booking) => {
@@ -203,6 +208,12 @@ export default function ManageBookings() {
   const [saveSuccess, setSaveSuccess] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
+
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: mapLibraries,
+  });
 
   // Fetch bookings from the database via backend API
   const fetchBookings = useCallback(async () => {
@@ -639,6 +650,36 @@ export default function ManageBookings() {
                     <div className="md:col-span-2">
                       <p className="text-xs font-semibold text-[#3878c2]">Notes</p>
                       <p className="mt-1 text-sm text-[#374151] whitespace-pre-wrap">{notes}</p>
+                    </div>
+
+                    <div className="md:col-span-2 mt-2">
+                      <p className="text-xs font-semibold text-[#3878c2] mb-2">Location Map</p>
+                      {collectionDetails.lat ? (
+                         <div className="relative w-full h-48 rounded-xl overflow-hidden border border-[#b4b4b4] shadow-sm">
+                            {isMapLoaded ? (
+                              <GoogleMap
+                                mapContainerStyle={{ width: '100%', height: '100%' }}
+                                center={{ lat: collectionDetails.lat, lng: collectionDetails.lng }}
+                                zoom={17}
+                                options={{ disableDefaultUI: true, zoomControl: true, draggable: false }}
+                              >
+                                <Marker position={{ lat: collectionDetails.lat, lng: collectionDetails.lng }} />
+                              </GoogleMap>
+                            ) : (
+                               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
+                                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#3878c2] mb-2"></div>
+                                   <span className="text-xs text-[#3878c2]">Loading Maps...</span>
+                               </div>
+                            )}
+                         </div>
+                      ) : (
+                         <div className="w-full p-4 rounded-xl border border-[#b4b4b4] bg-gray-50 flex flex-col items-center justify-center text-sm text-[#b4b4b4]">
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 mb-1 opacity-50">
+                               <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                             </svg>
+                             No exact GPS coordinates available for this booking.
+                         </div>
+                      )}
                     </div>
                   </div>
                 </section>

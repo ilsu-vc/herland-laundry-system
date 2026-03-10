@@ -328,13 +328,25 @@ export default function BookingDetails() {
                     )}
                   </ul>
                 </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs font-semibold uppercase text-[#b4b4b4]">
-                    Total Weight
-                  </p>
-                  <p className="mt-1 text-sm text-[#374151]">
-                    {booking?.serviceDetails?.weight || 0} kg
-                  </p>
+                <div className="sm:col-span-2 grid grid-cols-2 gap-4 border-t border-[#f0f0f0] pt-4 mt-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-[#b4b4b4]">
+                      No. of Bags/Loads
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-[#374151]">
+                      {booking?.serviceDetails?.numberOfBags || "-"}
+                    </p>
+                  </div>
+                  {booking?.serviceDetails?.bagDescription && (
+                    <div className="col-span-1">
+                      <p className="text-xs font-semibold uppercase text-[#b4b4b4]">
+                        Bag Description
+                      </p>
+                      <p className="mt-1 text-sm text-[#374151] italic">
+                        "{booking.serviceDetails.bagDescription}"
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

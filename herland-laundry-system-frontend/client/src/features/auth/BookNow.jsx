@@ -6,6 +6,10 @@ import DateTimePicker from "../../shared/components/DateTimePicker";
 import { supabase } from "../../lib/supabase";
 import { formatDate, formatTime, getRouteAddresses } from "../../shared/utils/formatters";
 import BookingCalendar from "../../shared/components/BookingCalendar";
+import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from "@react-google-maps/api";
+
+const mapLibraries = ["places"];
+const defaultCenter = { lat: 14.537751, lng: 121.001379 }; // Pasay approximate
 
 /* =========================
    Parent Component
@@ -32,6 +36,8 @@ export default function BookNow() {
   const [availableAddons, setAvailableAddons] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("gcash");
+  const [numberOfBags, setNumberOfBags] = useState(1);
+  const [bagDescription, setBagDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
@@ -48,6 +54,17 @@ export default function BookNow() {
   const [deliveryInfo, setDeliveryInfo] = useState({
     date: "",
     time: "09:00",
+  });
+  const [customerLocation, setCustomerLocation] = useState({
+    address: "",
+    lat: null,
+    lng: null
+  });
+
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: mapLibraries,
   });
 
   // Fetch available services and add-ons from backend
@@ -126,6 +143,13 @@ export default function BookNow() {
               date: data.collectionDetails.deliveryDate,
               time: data.collectionDetails.deliveryTime,
             });
+            if (data.collectionDetails.lat && data.collectionDetails.lng) {
+              setCustomerLocation({
+                address: data.collectionDetails.pickupAddress || data.collectionDetails.deliveryAddress,
+                lat: data.collectionDetails.lat,
+                lng: data.collectionDetails.lng
+              });
+            }
           }
         } catch (err) {
           console.error("Error fetching booking for edit:", err);
@@ -246,6 +270,10 @@ export default function BookNow() {
             collectionInfo={collectionInfo}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
+            numberOfBags={numberOfBags}
+            setNumberOfBags={setNumberOfBags}
+            bagDescription={bagDescription}
+            setBagDescription={setBagDescription}
           />
         )}
         {step === 2 && (
@@ -261,7 +289,12 @@ export default function BookNow() {
         {step === 3 && (
           <StepAddress
             onBack={() => setStep(2)}
-            onNext={() => setStep(4)}
+            onNext={(location) => {
+              if (location) setCustomerLocation(location);
+              setStep(4);
+            }}
+            isMapLoaded={isMapLoaded}
+            initialLocation={customerLocation}
           />
         )}
         {step === 4 && (
@@ -275,8 +308,11 @@ export default function BookNow() {
             paymentMethod={paymentMethod}
             collectionInfo={collectionInfo}
             deliveryInfo={deliveryInfo}
+            customerLocation={customerLocation}
             notes={notes}
             setNotes={setNotes}
+            numberOfBags={numberOfBags}
+            bagDescription={bagDescription}
             isEditMode={isEditMode}
             editId={editId}
           />
@@ -303,6 +339,10 @@ function StepSelectServices({
   collectionInfo,
   paymentMethod,
   setPaymentMethod,
+  numberOfBags,
+  setNumberOfBags,
+  bagDescription,
+  setBagDescription,
 }) {
 
   const toggleService = (key) => {
@@ -395,18 +435,28 @@ function StepSelectServices({
           ))}
         </div>
 
-        {/* Laundry Weight */}
+        {/* No. of Loads/Bags */}
         <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
           <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
-            Laundry Weight
-            <br />
-            (in kg)
+            No. of Loads/Bags
           </span>
           <QuantityInput
-            value={weight}
-            onChange={setWeight}
-            allowDecimal={true} // allow 1 decimal
+            value={numberOfBags}
+            onChange={setNumberOfBags}
+            allowDecimal={false}
           />
+        </div>
+
+        {/* Bag Description */}
+        <div className="lg:col-span-1 border rounded-lg p-3 bg-white border-[#3878c2]">
+           <label className="block text-xs font-semibold text-[#3878c2] mb-1">Description of bag(s)</label>
+           <textarea
+             placeholder="e.g., 1 Pink Bag, 1 Blue Bag"
+             value={bagDescription}
+             onChange={(e) => setBagDescription(e.target.value)}
+             className="w-full text-sm p-1 border rounded text-[#3878c2] bg-white border-transparent placeholder-[#b4b4b4] focus:outline-none focus:ring-0"
+             rows={2}
+           />
         </div>
       </div>
 
@@ -786,13 +836,42 @@ function RadioRow({
 }
 
 /* =========================
-   Placeholder Steps
+   Step 3 - Address
 ========================= */
-function StepAddress({ onBack, onNext }) {
-  return (
-    <div className="relative min-h-[70vh] sm:min-h-[72vh] bg-[#ffffff] text-[#3878c2] pb-24 sm:pb-28 px-0 sm:px-2">
+function StepAddress({ onBack, onNext, isMapLoaded, initialLocation }) {
+  const [autocomplete, setAutocomplete] = useState(null);
+  const [location, setLocation] = useState(initialLocation?.lat ? initialLocation : { address: "", lat: null, lng: null });
+  const [mapCenter, setMapCenter] = useState(initialLocation?.lat ? { lat: initialLocation.lat, lng: initialLocation.lng } : defaultCenter);
+  const [searchValue, setSearchValue] = useState(initialLocation?.address || "");
 
-      <form className="absolute top-2 left-0 right-0 z-20 mx-auto max-w-2xl md:max-w-6xl lg:max-w-7xl px-0 sm:px-1">
+  const onLoad = (autoC) => setAutocomplete(autoC);
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      if (place.geometry && place.geometry.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const address = place.formatted_address || place.name;
+        
+        setLocation({ address, lat, lng });
+        setMapCenter({ lat, lng });
+        setSearchValue(address);
+      }
+    }
+  };
+
+  const handleNext = () => {
+    if (!location.address || !location.lat) {
+      alert("Please select a valid address from the dropdown suggestions.");
+      return;
+    }
+    onNext(location);
+  };
+
+  return (
+    <div className="flex flex-col min-h-[70vh] sm:min-h-[72vh] bg-[#ffffff] text-[#3878c2] pb-6 px-0 sm:px-2 relative">
+      <div className="z-20 mx-auto w-full max-w-2xl md:max-w-6xl lg:max-w-7xl px-2 sm:px-1 pt-2 pb-4">
         <label htmlFor="simple-search" className="sr-only">
           Search
         </label>
@@ -802,85 +881,72 @@ function StepAddress({ onBack, onNext }) {
             type="button"
             onClick={onBack}
             aria-label="Go back"
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#3878c2]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#3878c2] bg-white shadow-sm"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-5 w-5 text-[#3878c2]"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-[#3878c2]">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
           </button>
 
-          {/* Search input */}
-          <div className="relative flex-1">
-            <input
-              type="text"
-              id="simple-search"
-              className="w-full px-3 py-2.5 text-sm rounded-lg border border-[#3878c2] bg-white text-[#3878c2] placeholder:text-[#b4b4b4] focus:outline-none focus:ring-[#3878c2] focus:border-[#3878c2]"
-              placeholder="Find your address"
-              required
-            />
+          {/* Search input with Autocomplete */}
+          <div className="relative flex-1 bg-white shadow-sm rounded-lg">
+            {isMapLoaded ? (
+              <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
+                <input
+                  type="text"
+                  id="simple-search"
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-[#3878c2] bg-white text-[#3878c2] placeholder:text-[#b4b4b4] focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
+                  placeholder="Find your actual address..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  required
+                />
+              </Autocomplete>
+            ) : (
+              <input
+                type="text"
+                disabled
+                className="w-full px-3 py-2.5 text-sm rounded-lg border border-[#3878c2] bg-gray-100 text-[#b4b4b4]"
+                placeholder="Loading map..."
+              />
+            )}
           </div>
-
-          {/* Search button */}
-          <button
-            type="submit"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#3878c2]"
-            aria-label="Search"
-          >
-            <svg
-              className="h-5 w-5 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="2"
-                d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-              />
-            </svg>
-          </button>
-        </div>
-
-      </form>
-
-      <div className="relative min-h-[40vh] sm:min-h-[52vh] bg-[#ffffff]">
-        <div className="absolute inset-0" aria-hidden="true"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="size-8 text-[#4bad40]"
-          >
-            <path
-              fillRule="evenodd"
-              d="m11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 0 0-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.145.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-              clipRule="evenodd"
-            />
-          </svg>
         </div>
       </div>
 
+      <div className="relative flex-1 min-h-[40vh] mx-2 sm:mx-0 sm:min-h-[50vh] bg-[#ffffff] overflow-hidden rounded-xl border border-[#3878c2]/20 shadow-inner mb-28">
+        {isMapLoaded ? (
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+            center={mapCenter}
+            zoom={location.lat ? 17 : 12}
+            options={{ disableDefaultUI: true, zoomControl: true }}
+          >
+            {location.lat && (
+              <Marker position={{ lat: location.lat, lng: location.lng }} />
+            )}
+          </GoogleMap>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
+             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3878c2] mb-2"></div>
+             <span className="text-sm font-semibold text-[#3878c2]">Loading Maps...</span>
+          </div>
+        )}
+      </div>
+
       <div
-        className="dock dock-xl absolute bottom-0 left-0 right-0 w-full px-0 pb-4 sm:px-2"
+        className="fixed sm:absolute bottom-0 left-0 right-0 w-full px-4 pt-4 pb-6 sm:px-6 shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.1)] rounded-t-3xl border-t border-[#3878c2]/20 z-30"
         style={{ backgroundColor: "#63bce6" }}
       >
-        <div className="mx-auto max-w-2xl md:max-w-6xl lg:max-w-7xl pb-3 pt-4">
+        <div className="mx-auto max-w-2xl text-center">
+          <div className="mb-3">
+             <p className="text-xs font-semibold text-white uppercase tracking-wider">Selected Location</p>
+             <p className="text-sm font-bold text-white truncate">{location.address || "No location selected"}</p>
+          </div>
           <button
-            onClick={onNext}
-            className="w-full py-3 rounded-lg bg-[#ffffff] text-[#3878c2] font-semibold"
+            onClick={handleNext}
+            disabled={!location.lat}
+            className={`w-full py-3 rounded-lg font-bold transition-all shadow-md ${!location.lat ? "bg-white/50 text-[#3878c2]/50 cursor-not-allowed" : "bg-white text-[#3878c2] hover:bg-gray-50 active:scale-[0.98]"}`}
           >
             Choose this location
           </button>
@@ -900,8 +966,11 @@ function StepReview({
   paymentMethod = "gcash",
   collectionInfo = { optionLabel: "-", date: "", time: "" },
   deliveryInfo = { date: "", time: "" },
+  customerLocation,
   notes,
   setNotes,
+  numberOfBags,
+  bagDescription,
   isEditMode,
   editId,
 }) {
@@ -913,10 +982,10 @@ function StepReview({
 
   const calculateTotal = () => {
     let total = 0;
-    // Base services
+    // Base services - multiplied by no. of loads
     availableServices.forEach(s => {
       if (services[s.name.toLowerCase()]) {
-        total += s.currentPrice;
+        total += s.currentPrice * (Number(numberOfBags) || 1);
       }
     });
     
@@ -982,10 +1051,21 @@ function StepReview({
             <div className="text-sm">None</div>
           )}
 
-          {/* Laundry Weight */}
+          {/* No. of Bags & Description */}
           <h4 className="font-semibold mt-4 mb-1">
-            Laundry Weight: {weight || 0}kg
+            Laundry Details
           </h4>
+          <div className="text-sm space-y-1">
+            <div className="flex justify-between">
+              <span>No. of Bags/Loads:</span>
+              <span className="font-bold">{numberOfBags}</span>
+            </div>
+            {bagDescription && (
+              <div className="text-xs italic text-[#3878c2]">
+                "{bagDescription}"
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Collection & Delivery */}
@@ -1065,6 +1145,17 @@ function StepReview({
               .map(([addonName, quantity]) => ({ name: addonName, quantity }));
 
             const routeAddresses = getRouteAddresses(collectionInfo.option);
+            
+            // Override with precise locations if applicable
+            let finalPickup = routeAddresses.pickupAddress;
+            let finalDelivery = routeAddresses.deliveryAddress;
+            
+            if (collectionInfo.option === "pickedUpDelivered") {
+               finalPickup = customerLocation?.address || routeAddresses.pickupAddress;
+               finalDelivery = customerLocation?.address || routeAddresses.deliveryAddress;
+            } else if (collectionInfo.option === "dropOffDelivered") {
+               finalDelivery = customerLocation?.address || routeAddresses.deliveryAddress;
+            }
 
             const payload = {
               reference_number: nextReference,
@@ -1075,6 +1166,8 @@ function StepReview({
                 addons,
                 selectedAddons,
                 weight,
+                numberOfBags,
+                bagDescription,
                 availableServices, // Cache prices for historical accuracy
                 availableAddons,
               },
@@ -1085,8 +1178,10 @@ function StepReview({
                 collectionTime: collectionInfo.time || "",
                 deliveryDate: deliveryInfo.date || "",
                 deliveryTime: deliveryInfo.time || "",
-                pickupAddress: routeAddresses.pickupAddress,
-                deliveryAddress: routeAddresses.deliveryAddress,
+                pickupAddress: finalPickup,
+                deliveryAddress: finalDelivery,
+                lat: customerLocation?.lat || null,
+                lng: customerLocation?.lng || null,
               },
               payment_details: {
                 method: paymentMethod === "gcash" ? "GCash" : "Cash",

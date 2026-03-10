@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const supabase = require('../config/supabase');
 const { verifyRole } = require('../middleware/auth');
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 /**
  * @route   GET /api/v1/rider/assigned-bookings
@@ -27,11 +25,13 @@ router.get('/assigned-bookings', verifyRole('Rider'), async (req, res) => {
         if (userIds.length > 0) {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, full_name, address')
+                .select('id, full_name')
                 .in('id', userIds);
 
-            if (!profileError && profiles) {
-                profilesMap = Object.fromEntries(profiles.map(p => [p.id, { full_name: p.full_name, address: p.address }]));
+            if (profileError) {
+                console.error('Rider Fetch Profiles Error:', profileError.message);
+            } else if (profiles) {
+                profilesMap = Object.fromEntries(profiles.map(p => [p.id, { full_name: p.full_name }]));
             }
         }
 
@@ -39,8 +39,7 @@ router.get('/assigned-bookings', verifyRole('Rider'), async (req, res) => {
             const profile = profilesMap[b.user_id] || {};
             return {
                 ...b,
-                customerName: profile.full_name || 'Unknown Customer',
-                customerAddress: profile.address || ''
+                customerName: profile.full_name || 'Unknown Customer'
             };
         });
 
@@ -58,19 +57,17 @@ router.get('/assigned-bookings', verifyRole('Rider'), async (req, res) => {
  */
 router.get('/available-bookings', verifyRole('Rider'), async (req, res) => {
     try {
-        // Fetch bookings that are in 'Delivery in Progress' and have no rider
+        // Fetch bookings that are in 'Out for Delivery' (or legacy 'Delivery in Progress') and have no rider
         const { data, error } = await supabase
             .from('bookings')
             .select('*')
-            .eq('status', 'Delivery in Progress')
+            .or('status.eq.Out for Delivery,status.eq.Delivery in Progress')
             .is('rider_id', null)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
         // Filter out bookings declined by this rider
-        // We look into the 'declined_by' jsonb array if it exists, or just filter in memory for now
-        // if the column doesn't exist yet. Assumption: Column may not exist, so we'll be defensive.
         const filtered = (data || []).filter(b => {
             if (!b.declined_by || !Array.isArray(b.declined_by)) return true;
             return !b.declined_by.includes(req.user.id);
@@ -83,11 +80,13 @@ router.get('/available-bookings', verifyRole('Rider'), async (req, res) => {
         if (userIds.length > 0) {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, full_name, address')
+                .select('id, full_name')
                 .in('id', userIds);
 
-            if (!profileError && profiles) {
-                profilesMap = Object.fromEntries(profiles.map(p => [p.id, { full_name: p.full_name, address: p.address }]));
+            if (profileError) {
+                console.error('Rider Fetch Available Profiles Error:', profileError.message);
+            } else if (profiles) {
+                profilesMap = Object.fromEntries(profiles.map(p => [p.id, { full_name: p.full_name }]));
             }
         }
 
@@ -95,8 +94,7 @@ router.get('/available-bookings', verifyRole('Rider'), async (req, res) => {
             const profile = profilesMap[b.user_id] || {};
             return {
                 ...b,
-                customerName: profile.full_name || 'Unknown Customer',
-                customerAddress: profile.address || ''
+                customerName: profile.full_name || 'Unknown Customer'
             };
         });
 

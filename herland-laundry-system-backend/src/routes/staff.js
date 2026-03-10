@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const supabase = require('../config/supabase');
 const { verifyRole } = require('../middleware/auth');
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const notificationService = require('../services/notificationService');
 
 // Route: Update booking status (e.g., pending -> washing -> ready)
