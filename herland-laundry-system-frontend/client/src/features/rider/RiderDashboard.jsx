@@ -123,7 +123,7 @@ export default function RiderDashboard() {
 	const toggleExpand = (id) => setExpandedId((prev) => (prev === id ? null : id))
 
 	return (
-		<div className="min-h-screen bg-white px-4 py-6 sm:py-10">
+		<div className="min-h-screen bg-white px-4 py-6 pb-32 sm:py-10 sm:pb-32">
 			<div className="mx-auto w-full max-w-2xl md:max-w-5xl lg:max-w-6xl">
 				<header className="mb-6 flex items-center gap-2 text-[#3878c2]">
 					<button
@@ -165,7 +165,9 @@ export default function RiderDashboard() {
 					{currentBookings.map((booking) => (
 						<section key={booking.id} className="rounded-2xl border border-[#3878c2] bg-white p-4 shadow-sm flex flex-col">
 							<button type="button" onClick={() => toggleExpand(booking.id)} className="w-full text-left">
-								<h2 className="text-base font-semibold text-[#3878c2]">{booking.customerName}</h2>
+								<h2 className="text-base font-semibold text-[#3878c2]">
+									{booking.customerName} <span className="ml-1 text-xs font-normal opacity-70">#{booking.id}</span>
+								</h2>
 							</button>
 
 							<div className="mt-4 grid gap-4 sm:grid-cols-2 flex-grow">
@@ -215,7 +217,7 @@ export default function RiderDashboard() {
 			</div>
 
 			{selectedBooking && (
-				<div className="fixed inset-0 z-50 overflow-y-auto bg-white px-4 py-6 sm:py-10">
+				<div className="fixed inset-0 z-50 overflow-y-auto bg-white px-4 py-6 pb-32 sm:py-10 sm:pb-32">
 					<div className="mx-auto w-full max-w-2xl md:max-w-5xl lg:max-w-6xl">
 						<header className="mb-6 flex items-center gap-2 text-[#3878c2]">
 							<button
@@ -234,8 +236,10 @@ export default function RiderDashboard() {
 						<div className="bg-white">
 							<div className="flex justify-between items-start mb-6">
 								<div>
-									<h2 className="text-xl font-bold text-[#3878c2]">{selectedBooking.customerName}</h2>
-									<p className="text-sm text-[#b4b4b4]">Ref: {selectedBooking.id}</p>
+									<h2 className="text-xl font-bold text-[#3878c2]">
+										{selectedBooking.customerName}
+										<span className="ml-2 text-sm font-normal text-[#b4b4b4]">#{selectedBooking.id}</span>
+									</h2>
 								</div>
 								{activeTab === 'assigned' && (
 									<div className="flex flex-col gap-2">

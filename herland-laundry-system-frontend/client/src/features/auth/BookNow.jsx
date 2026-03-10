@@ -32,6 +32,8 @@ export default function BookNow() {
   const [availableAddons, setAvailableAddons] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("gcash");
+  const [numberOfBags, setNumberOfBags] = useState(1);
+  const [bagDescription, setBagDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
@@ -246,6 +248,10 @@ export default function BookNow() {
             collectionInfo={collectionInfo}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
+            numberOfBags={numberOfBags}
+            setNumberOfBags={setNumberOfBags}
+            bagDescription={bagDescription}
+            setBagDescription={setBagDescription}
           />
         )}
         {step === 2 && (
@@ -277,6 +283,8 @@ export default function BookNow() {
             deliveryInfo={deliveryInfo}
             notes={notes}
             setNotes={setNotes}
+            numberOfBags={numberOfBags}
+            bagDescription={bagDescription}
             isEditMode={isEditMode}
             editId={editId}
           />
@@ -303,6 +311,10 @@ function StepSelectServices({
   collectionInfo,
   paymentMethod,
   setPaymentMethod,
+  numberOfBags,
+  setNumberOfBags,
+  bagDescription,
+  setBagDescription,
 }) {
 
   const toggleService = (key) => {
@@ -395,18 +407,28 @@ function StepSelectServices({
           ))}
         </div>
 
-        {/* Laundry Weight */}
+        {/* No. of Loads/Bags */}
         <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
           <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
-            Laundry Weight
-            <br />
-            (in kg)
+            No. of Loads/Bags
           </span>
           <QuantityInput
-            value={weight}
-            onChange={setWeight}
-            allowDecimal={true} // allow 1 decimal
+            value={numberOfBags}
+            onChange={setNumberOfBags}
+            allowDecimal={false}
           />
+        </div>
+
+        {/* Bag Description */}
+        <div className="lg:col-span-1 border rounded-lg p-3 bg-white border-[#3878c2]">
+           <label className="block text-xs font-semibold text-[#3878c2] mb-1">Description of bag(s)</label>
+           <textarea
+             placeholder="e.g., 1 Pink Bag, 1 Blue Bag"
+             value={bagDescription}
+             onChange={(e) => setBagDescription(e.target.value)}
+             className="w-full text-sm p-1 border rounded text-[#3878c2] bg-white border-transparent placeholder-[#b4b4b4] focus:outline-none focus:ring-0"
+             rows={2}
+           />
         </div>
       </div>
 
@@ -902,6 +924,8 @@ function StepReview({
   deliveryInfo = { date: "", time: "" },
   notes,
   setNotes,
+  numberOfBags,
+  bagDescription,
   isEditMode,
   editId,
 }) {
@@ -913,10 +937,10 @@ function StepReview({
 
   const calculateTotal = () => {
     let total = 0;
-    // Base services
+    // Base services - multiplied by no. of loads
     availableServices.forEach(s => {
       if (services[s.name.toLowerCase()]) {
-        total += s.currentPrice;
+        total += s.currentPrice * (Number(numberOfBags) || 1);
       }
     });
     
@@ -982,10 +1006,21 @@ function StepReview({
             <div className="text-sm">None</div>
           )}
 
-          {/* Laundry Weight */}
+          {/* No. of Bags & Description */}
           <h4 className="font-semibold mt-4 mb-1">
-            Laundry Weight: {weight || 0}kg
+            Laundry Details
           </h4>
+          <div className="text-sm space-y-1">
+            <div className="flex justify-between">
+              <span>No. of Bags/Loads:</span>
+              <span className="font-bold">{numberOfBags}</span>
+            </div>
+            {bagDescription && (
+              <div className="text-xs italic text-[#3878c2]">
+                "{bagDescription}"
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Collection & Delivery */}
@@ -1075,6 +1110,8 @@ function StepReview({
                 addons,
                 selectedAddons,
                 weight,
+                numberOfBags,
+                bagDescription,
                 availableServices, // Cache prices for historical accuracy
                 availableAddons,
               },

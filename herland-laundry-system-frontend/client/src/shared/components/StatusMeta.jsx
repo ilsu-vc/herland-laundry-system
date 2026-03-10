@@ -70,7 +70,7 @@ export const getStatusKey = (status = "") => {
     return "OutForDelivery";
   if (lower === "cancelled" || lower.includes("cancelled"))
     return "BookingCancelled";
-  if (lower === "completed" || lower.includes("completed"))
+  if (lower === "completed" || lower.includes("completed") || lower === "delivered")
     return "BookingCompleted";
   return "BookingReceived";
 };
