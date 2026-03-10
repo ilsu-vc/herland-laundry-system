@@ -83,22 +83,8 @@ export default function TopNavbar({
             </button>
           ) : (
             <div className="flex items-center w-full">
-              {/* Mobile Logo */}
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="btn btn-ghost px-0 lg:hidden shrink-0"
-                aria-label="Go to landing page"
-              >
-                <img
-                  src="/images/SecondaryLogo.png"
-                  alt="Herland Laundry"
-                  className="h-10"
-                />
-              </button>
-
-              {/* Desktop Nav */}
-              <div className="hidden lg:flex items-center w-full">
+              {/* Nav Container - Visible and swippable on all screens */}
+              <div className="flex items-center w-full overflow-x-auto scrollbar-hide">
                 <button
                   type="button"
                   onClick={() => navigate('/')}
@@ -112,13 +98,13 @@ export default function TopNavbar({
                   />
                 </button>
 
-                <div className="flex-1 flex items-center justify-evenly gap-x-2 sm:gap-x-4 md:gap-x-6 px-4">
+                <div className="flex-1 flex items-center gap-x-1 sm:gap-x-2 md:gap-x-4 px-4 overflow-x-auto scrollbar-hide flex-nowrap min-w-0">
                   {navItems.filter(item => (!item.requiresAuth || session) && (!item.requiresGuest || !session)).map((item) => (
                     <button
                       key={`${item.label}-${item.path}`}
                       type="button"
                       onClick={() => handleNavItemClick(item)}
-                      className="btn btn-ghost text-[#3878c2] px-4 text-[15px] font-medium whitespace-nowrap transition-all duration-200 hover:scale-105"
+                      className="btn btn-ghost text-[#3878c2] px-3 sm:px-4 text-[14px] sm:text-[15px] font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 shrink-0"
                     >
                       {item.label}
                     </button>
