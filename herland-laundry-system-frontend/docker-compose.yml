@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: herland-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Sync the local client code to the container's /app directory
+      - ./client:/app
+      # Prevent the host's local node_modules from overriding the container's
+      - /app/node_modules
+    environment:
+      # Ensures Vite hot-reloading works properly when inside a Docker container
+      - CHOKIDAR_USEPOLLING=true
+    restart: unless-stopped
