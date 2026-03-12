@@ -8,7 +8,6 @@ import BookingHistory from '../features/user/bookings/BookingHistory'
 import BookingDetails from '../features/user/bookings/BookingDetails'
 import Notifications from '../shared/inbox/Notifications'
 import Profile from '../features/user/profile/Profile'
-import DigitalReceipt from '../features/user/bookings/DigitalReceipt'
 import LandingPage from '../features/landing/LandingPage'
 import Dashboard from '../features/landing/Dashboard'
 import RiderDashboard from '../features/rider/RiderDashboard'
@@ -20,9 +19,6 @@ import ManageServices from '../features/admin/ManageServices'
 import ManageUsers from '../features/admin/ManageUsers'
 import Reports from '../features/admin/Reports'
 import TempRoleSwitcher from '../shared/permissions/TempRoleSwitcher'
-import ForgotPassword from '../features/auth/ForgotPassword'
-import ResetPassword from '../features/auth/ResetPassword'
-import ManageAdmins from '../features/admin/ManageAdmins'
 
 function resolveNotificationsPathByRole() {
 	const activeRole = window.sessionStorage.getItem('activeRole')
@@ -45,7 +41,7 @@ function resolveBookingsElementByRole() {
 export default function AppRoutes() {
 	return (
 		<Routes>
-			<Route path="/" element={<LandingPage />} />
+			<Route path="/" element={<TempRoleSwitcher />} />
 			<Route path="/dashboard" element={<Dashboard />} />
 			<Route path="/landing" element={<LandingPage />} />
 			<Route path="/guest" element={<LandingPage />} />
@@ -55,34 +51,16 @@ export default function AppRoutes() {
 			<Route path="/admin" element={<AdminDashboard />} />
 			<Route path="/admin/manage-bookings" element={<ManageBookings />} />
 			<Route path="/admin/manage-employees" element={<ManageEmployees />} />
-			<Route path="/admin/manage-admins" element={<ManageAdmins />} />
 			<Route path="/admin/manage-services" element={<ManageServices />} />
 			<Route path="/admin/manage-users" element={<ManageUsers />} />
 			<Route path="/admin/reports" element={<Reports />} />
 			<Route path="/role-switcher" element={<TempRoleSwitcher />} />
 			<Route path="/login" element={<Login />} />
 			<Route path="/signup" element={<Signup />} />
-			<Route path="/forgot-password" element={<ForgotPassword />} />
-			<Route path="/reset-password" element={<ResetPassword />} />
-			<Route 
-				path="/book" 
-				element={
-					['Staff', 'Rider'].includes(window.sessionStorage.getItem('activeRole')) 
-						? <Navigate to={window.sessionStorage.getItem('activeRole') === 'Staff' ? '/staff' : '/rider'} replace /> 
-						: <BookNow />
-				} 
-			/>
-			<Route 
-				path="/payment" 
-				element={
-					['Staff', 'Rider'].includes(window.sessionStorage.getItem('activeRole')) 
-						? <Navigate to={window.sessionStorage.getItem('activeRole') === 'Staff' ? '/staff' : '/rider'} replace /> 
-						: <PaymentForm />
-				} 
-			/>
+			<Route path="/book" element={<BookNow />} />
+			<Route path="/payment" element={<PaymentForm />} />
 			<Route path="/bookings" element={resolveBookingsElementByRole()} />
 			<Route path="/bookings/:bookingId" element={<BookingDetails />} />
-			<Route path="/bookings/:bookingId/receipt" element={<DigitalReceipt />} />
 			<Route path="/notifications" element={<NotificationsRoleRedirect />} />
 			<Route path="/user/notifications" element={<Notifications />} />
 			<Route path="/staff/notifications" element={<Notifications />} />

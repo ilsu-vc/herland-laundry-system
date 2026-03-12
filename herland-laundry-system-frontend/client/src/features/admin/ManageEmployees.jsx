@@ -45,7 +45,7 @@ import { supabase } from '../../lib/supabase';
         const data = await response.json();
         // Filter for ONLY staff, rider, admin
         const mappedEmployees = data
-            .filter(u => ['Staff', 'Rider'].includes(u.role)) 
+            .filter(u => ['Staff', 'Rider', 'Admin'].includes(u.role)) 
             .map(user => ({
                 ...user,
                 name: user.full_name || user.name || 'Unknown',
@@ -220,7 +220,7 @@ import { supabase } from '../../lib/supabase';
             className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white"
           />
 
-          <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1 bg-white">
+          <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1">
             <p className="whitespace-nowrap text-xs font-semibold text-[#3878c2]">Sort by Employee ID</p>
             <div className="flex items-center gap-1.5">
               <RadioRow

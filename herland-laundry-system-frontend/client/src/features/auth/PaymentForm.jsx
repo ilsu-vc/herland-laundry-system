@@ -10,8 +10,6 @@ export default function PaymentForm() {
 	const amountToPayFromState = location.state?.amountToPay;
 	const paymentReferenceFromState = location.state?.paymentReference || '';
 
-	const isDownpayment = location.state?.isDownpayment || false;
-
 	const [referenceNumber, setReferenceNumber] = useState(paymentReferenceFromState);
 	const [amountToPay, setAmountToPay] = useState(amountToPayFromState || 0);
 	const [loading, setLoading] = useState(false);
@@ -116,9 +114,7 @@ export default function PaymentForm() {
 	return (
 		<div className="min-h-[calc(100vh-9rem)] bg-white px-4 py-6 md:px-6">
 			<div className="mx-auto w-full max-w-2xl rounded-xl border border-[#e6eef8] bg-white p-5 text-[#3878c2] shadow-sm md:p-6">
-				<h1 className="text-xl font-semibold">
-					{isDownpayment ? "25% Reservation Downpayment" : "Payment Submission"}
-				</h1>
+				<h1 className="text-xl font-semibold">Payment Submission</h1>
 
 				{error && (
 					<div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -139,7 +135,7 @@ export default function PaymentForm() {
 								Amount to Pay
 							</p>
 							<p className="mt-1 text-sm font-semibold text-[#3878c2]">
-								{formattedAmount || (isDownpayment ? "Step 1: Reservation Fee" : "Waiting for total amount.")}
+								{formattedAmount || 'Waiting for staff to input your total amount.'}
 							</p>
 						</div>
 					</div>
@@ -196,9 +192,10 @@ export default function PaymentForm() {
 				{submitted ? (
 					<div className="mt-5 rounded-lg border border-[#d9e8fb] bg-[#f5fbff] p-4">
 						<p className="text-sm font-semibold text-[#3878c2]">
-							{isDownpayment 
-								? "Downpayment submitted successfully! Your booking is now being processed. You can pay the remaining 75% balance upon collection."
-								: "Submitted successfully. Staff will now mark your payment status after verification."}
+							Submitted successfully. Staff will now mark your payment status as
+							either <span className="font-bold">Payment Confirmed</span> or{' '}
+							<span className="font-bold">Payment Flagged</span> after
+							verification.
 						</p>
 					</div>
 				) : null}

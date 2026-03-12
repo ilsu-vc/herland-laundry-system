@@ -1,44 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useLayout } from "../../app/LayoutContext";
 import { usePermissions } from "../../shared/permissions/UsePermissions";
 import DateTimePicker from "../../shared/components/DateTimePicker";
 import { supabase } from "../../lib/supabase";
-import { formatDate, formatTime, getRouteAddresses } from "../../shared/utils/formatters";
-import BookingCalendar from "../../shared/components/BookingCalendar";
 
 /* =========================
    Parent Component
 ========================= */
 export default function BookNow() {
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
-
-  // Auth Check
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert("Please sign up or log in to create a booking.");
-        navigate('/signup?redirect=book');
-      }
-    };
-    checkAuth();
-  }, [navigate]);
-  const [services, setServices] = useState({});
-  const [addons, setAddons] = useState({});
+  const [services, setServices] = useState({ wash: 0, dry: 0, fold: 0 });
+  const [addons, setAddons] = useState({ detergent: 0, conditioner: 0 });
   const [weight, setWeight] = useState(0);
-  const [availableServices, setAvailableServices] = useState([]);
-  const [availableAddons, setAvailableAddons] = useState([]);
-  const [loadingServices, setLoadingServices] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("gcash");
-  const [numberOfBags, setNumberOfBags] = useState(1);
-  const [bagDescription, setBagDescription] = useState("");
-  const [notes, setNotes] = useState("");
-  const [searchParams] = useSearchParams();
-  const editId = searchParams.get("edit");
-  const isEditMode = !!editId;
-
   const { setHideBottomNav } = useLayout();
   const { requestLocationPermission } = usePermissions();
   const [collectionInfo, setCollectionInfo] = useState({
@@ -51,91 +26,7 @@ export default function BookNow() {
     date: "",
     time: "09:00",
   });
-
-  // Fetch available services and add-ons from backend
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      try {
-        setLoadingServices(true);
-        const response = await fetch("http://localhost:5000/api/v1/customer/services");
-        if (response.ok) {
-          const data = await response.json();
-          setAvailableServices(data.services || []);
-          setAvailableAddons(data.addOns || []);
-          
-          // Initialize state if not in edit mode
-          if (!isEditMode) {
-            const initialServices = {};
-            data.services.forEach(s => initialServices[s.name.toLowerCase()] = 0);
-            setServices(initialServices);
-
-            const initialAddons = {};
-            data.addOns.forEach(a => initialAddons[a.name.toLowerCase()] = 0);
-            setAddons(initialAddons);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching services metadata:", err);
-      } finally {
-        setLoadingServices(false);
-      }
-    };
-    fetchMetadata();
-  }, [isEditMode]);
-
-  useEffect(() => {
-    if (isEditMode && !loadingServices) {
-      const fetchBooking = async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const token = session?.access_token;
-          const response = await fetch(`http://localhost:5000/api/v1/customer/my-bookings/${editId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data.status.toLowerCase() !== "pending") {
-              alert("Only pending bookings can be edited.");
-              navigate("/bookings");
-              return;
-            }
-            // Hydrate state
-            // Merge with available items to ensure all keys exist
-            const mergedServices = {};
-            availableServices.forEach(s => {
-              const key = s.name.toLowerCase();
-              mergedServices[key] = data.serviceDetails.services?.[key] || 0;
-            });
-            setServices(mergedServices);
-
-            const mergedAddons = {};
-            availableAddons.forEach(a => {
-              const key = a.name.toLowerCase();
-              mergedAddons[key] = data.serviceDetails.addons?.[key] || 0;
-            });
-            setAddons(mergedAddons);
-
-            setWeight(data.serviceDetails.weight || 0);
-            setPaymentMethod(data.paymentDetails.method === "GCash" ? "gcash" : "cash");
-            setNotes(data.notes || "");
-            setCollectionInfo({
-              option: data.collectionDetails.option,
-              optionLabel: data.collectionDetails.optionLabel,
-              date: data.collectionDetails.collectionDate,
-              time: data.collectionDetails.collectionTime,
-            });
-            setDeliveryInfo({
-              date: data.collectionDetails.deliveryDate,
-              time: data.collectionDetails.deliveryTime,
-            });
-          }
-        } catch (err) {
-          console.error("Error fetching booking for edit:", err);
-        }
-      };
-      fetchBooking();
-    }
-  }, [isEditMode, editId]);
+  const prices = { wash: 60, dry: 65, fold: 30 };
 
   const steps = [
     "Select Services",
@@ -236,9 +127,7 @@ export default function BookNow() {
         {step === 1 && (
           <StepSelectServices
             onNext={() => handleStepChange(2)}
-            availableServices={availableServices}
-            availableAddons={availableAddons}
-            loading={loadingServices}
+            prices={prices}
             services={services}
             setServices={setServices}
             addons={addons}
@@ -248,10 +137,6 @@ export default function BookNow() {
             collectionInfo={collectionInfo}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
-            numberOfBags={numberOfBags}
-            setNumberOfBags={setNumberOfBags}
-            bagDescription={bagDescription}
-            setBagDescription={setBagDescription}
           />
         )}
         {step === 2 && (
@@ -273,20 +158,13 @@ export default function BookNow() {
         {step === 4 && (
           <StepReview
             onBack={() => setStep(3)}
-            availableServices={availableServices}
-            availableAddons={availableAddons}
+            prices={prices}
             services={services}
             addons={addons}
             weight={weight}
             paymentMethod={paymentMethod}
             collectionInfo={collectionInfo}
             deliveryInfo={deliveryInfo}
-            notes={notes}
-            setNotes={setNotes}
-            numberOfBags={numberOfBags}
-            bagDescription={bagDescription}
-            isEditMode={isEditMode}
-            editId={editId}
           />
         )}
       </div>
@@ -299,9 +177,7 @@ export default function BookNow() {
 ========================= */
 function StepSelectServices({
   onNext,
-  availableServices,
-  availableAddons,
-  loading,
+  prices,
   services,
   setServices,
   addons,
@@ -311,10 +187,6 @@ function StepSelectServices({
   collectionInfo,
   paymentMethod,
   setPaymentMethod,
-  numberOfBags,
-  setNumberOfBags,
-  bagDescription,
-  setBagDescription,
 }) {
 
   const toggleService = (key) => {
@@ -334,7 +206,7 @@ function StepSelectServices({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 pr-2">
             <h3 className="font-semibold text-[#3878c2]">{title}</h3>
-            <p className="text-xs text-[#3878c2]">₱{price.toFixed(2)} per load</p>
+            <p className="text-xs text-[#3878c2]">₱{price} per load</p>
           </div>
           <button
             onClick={onToggle}
@@ -360,14 +232,6 @@ function StepSelectServices({
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3878c2]"></div>
-      </div>
-    );
-  }
-
   return (
     <>
     <div className="px-0 sm:px-2">
@@ -376,15 +240,24 @@ function StepSelectServices({
       </h2>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {availableServices.map((s) => (
-          <ServiceCard
-            key={s.id}
-            title={s.name}
-            price={s.currentPrice}
-            value={services[s.name.toLowerCase()]}
-            onToggle={() => toggleService(s.name.toLowerCase())}
-          />
-        ))}
+        <ServiceCard
+          title="Wash"
+          price={prices.wash}
+          value={services.wash}
+          onToggle={() => toggleService("wash")}
+        />
+        <ServiceCard
+          title="Dry"
+          price={prices.dry}
+          value={services.dry}
+          onToggle={() => toggleService("dry")}
+        />
+        <ServiceCard
+          title="Fold"
+          price={prices.fold}
+          value={services.fold}
+          onToggle={() => toggleService("fold")}
+        />
       </div>
 
       {/* Add-Ons */}
@@ -394,41 +267,37 @@ function StepSelectServices({
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         <div className="lg:col-span-1">
-          {availableAddons.map((a) => (
-            <AddonRow
-              key={a.id}
-              label={a.name}
-              value={addons[a.name.toLowerCase()]}
-              onChange={(v) =>
-                setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
-              }
-              allowDecimal={false}
-            />
-          ))}
-        </div>
+          <AddonRow
+            label="Detergent"
+            value={addons.detergent}
+            onChange={(v) =>
+              setAddons((prev) => ({ ...prev, detergent: Math.max(0, Math.floor(v)) }))
+            }
+            allowDecimal={false} // integers only
+          />
 
-        {/* No. of Loads/Bags */}
-        <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
-          <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
-            No. of Loads/Bags
-          </span>
-          <QuantityInput
-            value={numberOfBags}
-            onChange={setNumberOfBags}
-            allowDecimal={false}
+          <AddonRow
+            label="Fabric Conditioner"
+            value={addons.conditioner}
+            onChange={(v) =>
+              setAddons((prev) => ({ ...prev, conditioner: Math.max(0, Math.floor(v)) }))
+            }
+            allowDecimal={false} // integers only
           />
         </div>
 
-        {/* Bag Description */}
-        <div className="lg:col-span-1 border rounded-lg p-3 bg-white border-[#3878c2]">
-           <label className="block text-xs font-semibold text-[#3878c2] mb-1">Description of bag(s)</label>
-           <textarea
-             placeholder="e.g., 1 Pink Bag, 1 Blue Bag"
-             value={bagDescription}
-             onChange={(e) => setBagDescription(e.target.value)}
-             className="w-full text-sm p-1 border rounded text-[#3878c2] bg-white border-transparent placeholder-[#b4b4b4] focus:outline-none focus:ring-0"
-             rows={2}
-           />
+        {/* Laundry Weight */}
+        <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
+          <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2 ">
+            Laundry Weight
+            <br />
+            (in kg)
+          </span>
+          <QuantityInput
+            value={weight}
+            onChange={setWeight}
+            allowDecimal={true} // allow 1 decimal
+          />
         </div>
       </div>
 
@@ -540,8 +409,8 @@ function QuantityInput({ value, onChange, allowDecimal }) {
         onChange={handleChange}
         onBlur={handleBlur}
         type="text"
-        className="w-full h-10 text-center border-y bg-white outline-none"
-        style={{ borderColor: "#3878c2", color: "#3878c2" }}
+        className="w-full h-10 text-center border-y outline-none"
+        style={{ borderColor: "#3878c2", color: "#3878c2", backgroundColor: "white"}}
       />
 
       <button
@@ -687,56 +556,78 @@ function StepCollection({
       {/* Divider */}
       <hr className="border-t-1 border-[#3878c2] w-11/12 mx-auto md:hidden" />
 
-      {/* Collection & Delivery Section */}
+      {/* Collection Section */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Collection Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#3878c2]">Collection Schedule</h3>
-            <div className="text-[10px] bg-white border border-[#3878c2] px-2 py-1 rounded-full">
-              {collectionInfo.date ? formatDate(collectionInfo.date) : 'No date'} @ {collectionInfo.time ? formatTime(collectionInfo.time) : 'No time'}
-            </div>
+        <div className="space-y-3">
+          <h3 className="font-semibold text-[#3878c2]">Collection</h3>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Preferred Date</label>
+            <DateTimePicker
+              mode="date"
+              value={collectionInfo.date}
+              onChange={(date) =>
+                setCollectionInfo((prev) => ({ ...prev, date }))
+              }
+            />
           </div>
-          
-          <BookingCalendar 
-            selectedDate={collectionInfo.date}
-            onDateChange={(date) => setCollectionInfo(prev => ({ ...prev, date }))}
-            selectedTime={collectionInfo.time}
-            onTimeChange={(time) => setCollectionInfo(prev => ({ ...prev, time }))}
-          />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Preferred Time</label>
+            <DateTimePicker
+              mode="time"
+              value={collectionInfo.time}
+              onChange={(time) =>
+                setCollectionInfo((prev) => ({ ...prev, time }))
+              }
+              min="09:00"
+              max="18:00"
+              required
+            />
+          </div>
 
           <div className="flex flex-col gap-1">
             <input
               type="text"
               value={autofill[option].collection}
               readOnly
-              className="w-full p-2.5 rounded border border-[#3878c2] text-[#3878c2] bg-white text-sm font-medium"
+              className="w-full p-2.5 rounded border border-default-medium text-[#3878c2] bg-neutral-secondary-medium bg-white"
             />
           </div>
         </div>
+        <hr className="border-t-1 border-[#3878c2] w-11/12 mx-auto md:hidden" />
+        <div className="space-y-3">
+          <h3 className="font-semibold text-[#3878c2]">Delivery</h3>
 
-        {/* Delivery Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#3878c2]">Delivery Schedule</h3>
-            <div className="text-[10px] bg-white border border-[#3878c2] px-2 py-1 rounded-full">
-              {deliveryInfo.date ? formatDate(deliveryInfo.date) : 'No date'} @ {deliveryInfo.time ? formatTime(deliveryInfo.time) : 'No time'}
-            </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Preferred Date</label>
+            <DateTimePicker
+              mode="date"
+              value={deliveryInfo.date}
+              onChange={(date) =>
+                setDeliveryInfo((prev) => ({ ...prev, date }))
+              }
+            />
           </div>
-
-          <BookingCalendar 
-            selectedDate={deliveryInfo.date}
-            onDateChange={(date) => setDeliveryInfo(prev => ({ ...prev, date }))}
-            selectedTime={deliveryInfo.time}
-            onTimeChange={(time) => setDeliveryInfo(prev => ({ ...prev, time }))}
-          />
-
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Preferred Time</label>
+            <DateTimePicker
+              mode="time"
+              value={deliveryInfo.time}
+              onChange={(time) =>
+                setDeliveryInfo((prev) => ({ ...prev, time }))
+              }
+              min="09:00"
+              max="18:00"
+              required
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <input
               type="text"
               value={autofill[option].delivery}
               readOnly
-              className="w-full p-2.5 rounded border border-[#3878c2] text-[#3878c2] bg-white text-sm font-medium"
+              className="w-full p-2.5 rounded border border-default-medium text-[#3878c2] bg-neutral-secondary-medium bg-white"
             />
           </div>
         </div>
@@ -914,55 +805,85 @@ function StepAddress({ onBack, onNext }) {
 
 function StepReview({
   onBack,
-  services = {},
-  addons = {},
+  services = { wash: 0, dry: 0, fold: 0 },
+  addons = { detergent: 0, conditioner: 0 },
   weight = 0,
-  availableServices = [],
-  availableAddons = [],
+  prices = { wash: 60, dry: 65, fold: 30 },
   paymentMethod = "gcash",
   collectionInfo = { optionLabel: "-", date: "", time: "" },
   deliveryInfo = { date: "", time: "" },
-  notes,
-  setNotes,
-  numberOfBags,
-  bagDescription,
-  isEditMode,
-  editId,
 }) {
   const navigate = useNavigate();
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("success");
-   const [referenceNumber, setReferenceNumber] = useState("");
-   const [paymentReference, setPaymentReference] = useState("");
-
-  const calculateTotal = () => {
-    let total = 0;
-    // Base services - multiplied by no. of loads
-    availableServices.forEach(s => {
-      if (services[s.name.toLowerCase()]) {
-        total += s.currentPrice * (Number(numberOfBags) || 1);
-      }
-    });
-    
-    // Add-ons
-    availableAddons.forEach(a => {
-      const qty = Number(addons[a.name.toLowerCase()]) || 0;
-      if (qty > 0) {
-        total += a.currentPrice * qty;
-      }
-    });
-
-    return total; 
-  };
-
-  const calculateDownpayment = () => {
-    return calculateTotal() * 0.25;
-  };
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [notes, setNotes] = useState("");
 
   const generateReferenceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
     const randomPart = Math.floor(1000 + Math.random() * 9000);
     return `HL-${timestamp}-${randomPart}`;
+  };
+
+  const formatBookingDate = (iso) =>
+    new Date(iso).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).replace(/\s/g, " ");
+
+  const getRouteAddresses = (option) => {
+    if (option === "pickedUpDelivered") {
+      return {
+        pickupAddress: "Customer address (pickup)",
+        deliveryAddress: "Customer address (delivery)",
+      };
+    }
+
+    if (option === "dropOffDelivered") {
+      return {
+        pickupAddress: "Herland Laundry - Main Branch",
+        deliveryAddress: "Customer address (delivery)",
+      };
+    }
+
+    return {
+      pickupAddress: "Herland Laundry - Main Branch",
+      deliveryAddress: "Herland Laundry - Main Branch",
+    };
+  };
+
+
+  // Helper to format Add-Ons quantities
+  const formatAddonQuantity = (key, value) => {
+    if (key === "detergent" || key === "conditioner") {
+      return value * 2; // 2pcs per bundle
+    }
+    return value;
+  };
+
+  // Format date for display
+  const formatDate = (date) => {
+    if (!date) return "-";
+    const today = new Date();
+    const d = new Date(date);
+    const day = d.getDate().toString().padStart(2, "0");
+    const month = d.toLocaleString("default", { month: "long" });
+    return today.toDateString() === d.toDateString()
+      ? `Today | ${month} ${day}, ${d.getFullYear()}`
+      : `${month} ${day}, ${d.getFullYear()}`;
+  };
+
+  // Format time to 12-hour
+  const formatTime = (time) => {
+    if (!time) return "-";
+    const [hourStr, min] = time.split(":");
+    let hour = parseInt(hourStr, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    if (hour > 12) hour -= 12;
+    if (hour === 0) hour = 12;
+    return `${hour.toString().padStart(2, "0")}:${min} ${ampm}`;
   };
 
   return (
@@ -974,53 +895,36 @@ function StepReview({
         <div className="p-4 border rounded bg-[#ffffff] shadow-sm">
           <h3 className="font-semibold mb-2">Services Selected</h3>
           <ul className="list-disc list-inside text-sm">
-            {availableServices.filter(s => services[s.name.toLowerCase()]).map(s => (
-              <li key={s.id}>{s.name} (₱{s.currentPrice.toFixed(2)} per load)</li>
-            ))}
-            {availableServices.filter(s => services[s.name.toLowerCase()]).length === 0 && <li>None</li>}
+            {services.wash ? <li>Wash (₱{prices.wash} per load)</li> : null}
+            {services.dry ? <li>Dry (₱{prices.dry} per load)</li> : null}
+            {services.fold ? <li>Fold (₱{prices.fold} per load)</li> : null}
+            {!services.wash && !services.dry && !services.fold && <li>None</li>}
           </ul>
-
-          <h4 className="font-semibold mt-4 mb-1">Price Breakdown</h4>
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span>Total Estimated:</span>
-              <span className="font-bold">₱{calculateTotal().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-[#4bad40]">
-              <span>25% Downpayment:</span>
-              <span className="font-bold">₱{calculateDownpayment().toFixed(2)}</span>
-            </div>
-          </div>
 
           {/* Add-Ons */}
           <h4 className="font-semibold mt-4 mb-1">Add-Ons</h4>
-          {availableAddons.filter(a => Number(addons[a.name.toLowerCase()]) > 0).length > 0 ? (
+          {(addons.detergent || addons.conditioner) ? (
             <ul className="list-disc list-inside text-sm">
-              {availableAddons.filter(a => Number(addons[a.name.toLowerCase()]) > 0).map(a => (
-                <li key={a.id}>
-                  {a.name}: {addons[a.name.toLowerCase()]} pcs (₱{(a.currentPrice * addons[a.name.toLowerCase()]).toFixed(2)})
+              {addons.detergent ? (
+                <li>
+                  Detergent: {formatAddonQuantity("detergent", addons.detergent)} pcs
                 </li>
-              ))}
+              ) : null}
+              {addons.conditioner ? (
+                <li>
+                  Fabric Conditioner: {" "}
+                  {formatAddonQuantity("conditioner", addons.conditioner)} pcs
+                </li>
+              ) : null}
             </ul>
           ) : (
             <div className="text-sm">None</div>
           )}
 
-          {/* No. of Bags & Description */}
+          {/* Laundry Weight */}
           <h4 className="font-semibold mt-4 mb-1">
-            Laundry Details
+            Laundry Weight: {weight || 0}kg
           </h4>
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span>No. of Bags/Loads:</span>
-              <span className="font-bold">{numberOfBags}</span>
-            </div>
-            {bagDescription && (
-              <div className="text-xs italic text-[#3878c2]">
-                "{bagDescription}"
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Collection & Delivery */}
@@ -1070,7 +974,7 @@ function StepReview({
             placeholder="Notes or requests for your laundry"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            className="w-full p-2 border rounded text-[#3878c2] bg-white placeholder-[#b4b4b4] focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
+            className="w-full p-2 border rounded text-[#b4b4b4] placeholder-[#b4b4b4] focus:outline-none focus:ring-1 focus:ring-[#3878c2] bg-white"
             rows={3}
           />
         </div>
@@ -1087,7 +991,7 @@ function StepReview({
         </button>
         <button
           onClick={async () => {
-            const nextReference = isEditMode ? editId : generateReferenceNumber();
+            const nextReference = generateReferenceNumber();
             const nextPaymentReference = "";
 
             // Build the booking payload
@@ -1110,10 +1014,6 @@ function StepReview({
                 addons,
                 selectedAddons,
                 weight,
-                numberOfBags,
-                bagDescription,
-                availableServices, // Cache prices for historical accuracy
-                availableAddons,
               },
               collection_details: {
                 option: collectionInfo.option || "dropOffPickUpLater",
@@ -1129,10 +1029,6 @@ function StepReview({
                 method: paymentMethod === "gcash" ? "GCash" : "Cash",
                 referenceNumber: paymentMethod === "gcash" ? "" : "-",
                 status: paymentMethod === "gcash" ? "For confirmation" : "Pay on collection",
-                totalAmount: calculateTotal(),
-                downpaymentRequired: calculateDownpayment(),
-                amountToPay: calculateDownpayment(), // For GCash initial payment
-                balance: calculateTotal() - calculateDownpayment(),
               },
               notes: notes || "",
             };
@@ -1141,14 +1037,8 @@ function StepReview({
               const { data: { session } } = await supabase.auth.getSession();
               const token = session?.access_token;
 
-              const url = isEditMode 
-                ? `http://localhost:5000/api/v1/customer/my-bookings/${editId}/update` 
-                : "http://localhost:5000/api/v1/customer/book";
-              
-              const method = isEditMode ? "PATCH" : "POST";
-
-              const response = await fetch(url, {
-                method,
+              const response = await fetch("http://localhost:5000/api/v1/customer/book", {
+                method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                   ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -1158,20 +1048,13 @@ function StepReview({
 
               if (response.ok) {
                 const result = await response.json();
-                const ref = isEditMode ? editId : (result.booking?.reference_number || nextReference);
-                
-                if (isEditMode) {
-                  alert("Booking updated successfully.");
-                  navigate(`/bookings/${editId}`);
-                  return;
-                }
-
+                const ref = result.booking?.reference_number || nextReference;
                  setBookingStatus("success");
                  setReferenceNumber(ref);
                  setPaymentReference(nextPaymentReference);
                } else {
                 const errData = await response.json().catch(() => ({}));
-                console.error("Booking request failed:", errData.error || response.statusText);
+                console.error("Booking failed:", errData.error || response.statusText);
                 setBookingStatus("error");
                 setReferenceNumber("");
                 setPaymentReference("");
@@ -1187,7 +1070,7 @@ function StepReview({
           }}
           className="px-4 py-2 rounded text-white bg-[#4bad40]"
         >
-          {isEditMode ? "Update Booking" : "Confirm Booking"}
+          Confirm Booking
         </button>
       </div>
 
@@ -1251,8 +1134,7 @@ function StepReview({
                      state: {
                        bookingReference: referenceNumber,
                        paymentReference,
-                       amountToPay: calculateDownpayment(), 
-                       isDownpayment: true,
+                       amountToPay: 0, // New bookings start with 0 amount to pay until admin sets it
                      },
                    });
                    return;

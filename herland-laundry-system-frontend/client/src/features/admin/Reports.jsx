@@ -29,8 +29,6 @@ const CHART_TYPE_LABELS = {
 
 const REPORTS = [
   { key: 'bookingVolume', label: 'Booking Volume Trend', views: ['bar', 'line'] },
-  { key: 'revenueTrend', label: 'Revenue Trend (Completed)', views: ['bar', 'line'] },
-  { key: 'customerActivity', label: 'Customer Leaderboard (Top 10)', views: ['bar'] },
   { key: 'serviceMix', label: 'Service Mix Report', views: ['bar', 'pie'] },
   { key: 'addons', label: 'Add-ons Consumption Report', views: ['bar', 'pie'] },
   { key: 'paymentSplit', label: 'Payment Method Split', views: ['bar', 'pie'] },
@@ -164,9 +162,6 @@ function buildDistributionData(records) {
     .filter((entry) => entry.value > 0);
 }
 
-const formatCurrency = (value) => 
-  `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-
 function ReportChart({ view, data, xKey = 'name', yKey = 'value' }) {
   if (!data.length) {
     return (
@@ -202,8 +197,8 @@ function ReportChart({ view, data, xKey = 'name', yKey = 'value' }) {
           <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
             <XAxis dataKey={xKey} tick={{ fill: '#3878c2', fontSize: 11 }} />
-            <YAxis allowDecimals={false} tickFormatter={(val) => data[0]?.isCurrency ? formatCurrency(val) : val} />
-            <Tooltip formatter={(val) => data[0]?.isCurrency ? formatCurrency(val) : val} />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
             <Line type="monotone" dataKey={yKey} stroke="#3878c2" strokeWidth={3} dot={{ r: 4, fill: '#3878c2' }} />
           </LineChart>
         </ResponsiveContainer>
@@ -217,8 +212,8 @@ function ReportChart({ view, data, xKey = 'name', yKey = 'value' }) {
         <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
           <XAxis dataKey={xKey} tick={{ fill: '#3878c2', fontSize: 11 }} />
-          <YAxis allowDecimals={false} tickFormatter={(val) => data[0]?.isCurrency ? formatCurrency(val) : val} />
-          <Tooltip formatter={(val) => data[0]?.isCurrency ? formatCurrency(val) : val} />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
           <Bar dataKey={yKey} radius={[8, 8, 0, 0]}>
             {data.map((entry, index) => (
               <Cell key={`${entry[xKey]}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -281,8 +276,6 @@ export default function Reports() {
 
   const computed = useMemo(() => {
     const volumeMap = {};
-    const revenueMap = {};
-    const customerMap = {};
     const serviceMap = { Wash: 0, Dry: 0, Fold: 0 };
     const addonsMap = { Detergent: 0, Conditioner: 0 };
     const paymentMap = { GCash: 0, Cash: 0, Unknown: 0 };
@@ -310,17 +303,8 @@ export default function Reports() {
             : timeframe === 'weekly'
               ? getWeekLabel(createdAt)
               : `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
-        
         volumeMap[key] = (volumeMap[key] || 0) + 1;
-
-        if (getOutcome(booking) === 'Success') {
-          const revenue = Number(booking.payment_details?.totalAmount || 0);
-          revenueMap[key] = (revenueMap[key] || 0) + revenue;
-        }
       }
-
-      const customerName = booking.customerName || 'Walk-in / Unknown';
-      customerMap[customerName] = (customerMap[customerName] || 0) + 1;
 
       const services = getServiceCounts(booking);
       serviceMap.Wash += services.wash;
@@ -349,23 +333,16 @@ export default function Reports() {
       outcomeMap[outcome] = (outcomeMap[outcome] || 0) + 1;
     });
 
-    const bookingVolume = Object.entries(volumeMap)
+    let bookingVolume = Object.entries(volumeMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, value]) => ({ name, value }));
 
-    const revenueTrend = Object.entries(revenueMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([name, value]) => ({ name, value, isCurrency: true }));
-
-    const customerActivity = Object.entries(customerMap)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10)
-      .map(([name, value]) => ({ name, value }));
+    if (!bookingVolume.length && displayBookings.length > 0) {
+      bookingVolume = [{ name: 'Total Bookings', value: displayBookings.length }];
+    }
 
     return {
       bookingVolume,
-      revenueTrend,
-      customerActivity,
       serviceMix: buildDistributionData(serviceMap),
       addons: buildDistributionData(addonsMap),
       paymentSplit: buildDistributionData(paymentMap),
@@ -434,7 +411,7 @@ export default function Reports() {
                 label: report.label,
                 disabled: false
               }))}
-              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none"
+              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none bg-white"
             />
           </div>
 
@@ -469,7 +446,7 @@ export default function Reports() {
                 { value: 'weekly', label: 'Weekly' },
                 { value: 'monthly', label: 'Monthly' },
               ]}
-              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
+              className="w-full rounded-lg border border-[#3878c3] px-3 py-2 text-sm text-[#3878c3] focus:border-[#3878c2] focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 bg-white"
             />
           </div>
         </div>

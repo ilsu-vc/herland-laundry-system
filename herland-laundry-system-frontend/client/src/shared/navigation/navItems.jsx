@@ -85,62 +85,6 @@ const USER_ICON = (
   </svg>
 );
 
-const SERVICES_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 17.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
-    />
-  </svg>
-);
-
-const RATES_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75m0 10.5v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 12.75v3.75m0-10.5v1.5M9.75 11.25H12"
-    />
-  </svg>
-);
-
-const FAQ_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
-    />
-  </svg>
-);
-
 const MANAGE_SERVICES_ICON = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -172,96 +116,44 @@ const REPORTS_ICON = (
   </svg>
 );
 
-const LOGIN_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
-    />
-  </svg>
-);
-
-const REGISTER_ICON = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="size-6"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
-    />
-  </svg>
-);
 // ================= NAVIGATION =================
 
 const guestNavItems = [
-  { label: "Home", path: "/", icon: HOME_ICON, sectionId: null },
-  { label: "Our Services", path: "/", icon: SERVICES_ICON, sectionId: "services" },
-  { label: "Service Rates", path: "/", icon: RATES_ICON, sectionId: "rates" },
-  { label: "FAQs", path: "/", icon: FAQ_ICON, sectionId: "faq" },
-  { label: "Login", path: "/login", icon: LOGIN_ICON, requiresGuest: true },
-  { label: "Register", path: "/signup", icon: REGISTER_ICON, requiresGuest: true },
+  { label: "Home", path: "/landing", sectionId: null },
+  { label: "Our Services", path: "/landing", sectionId: "services" },
+  { label: "Service Rates", path: "/landing", sectionId: "rates" },
+  { label: "FAQs", path: "/landing", sectionId: "faq" },
 ];
 
 const userNavItems = [
-  { label: "Home", path: "/dashboard", icon: HOME_ICON, requiresAuth: true },
-  { label: "Book Now", path: "/book", icon: BOOK_NOW_ICON, requiresAuth: true },
-  { label: "Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
-  { label: "Notifications", path: "/user/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
-  { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
+  { label: "Home", path: "/dashboard", icon: HOME_ICON },
+  { label: "Book Now", path: "/book", icon: BOOK_NOW_ICON },
+  { label: "Bookings", path: "/bookings", icon: BOOKINGS_ICON },
+  { label: "Notifications", path: "/user/notifications", icon: NOTIFICATIONS_ICON },
+  { label: "My Profile", path: "/profile", icon: USER_ICON },
 ];
 
 const riderNavItems = [
-  { label: "Manage Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
-  { label: "Notifications", path: "/rider/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
+  { label: "Manage Bookings", path: "/bookings", icon: BOOKINGS_ICON },
+  { label: "Notifications", path: "/rider/notifications", icon: NOTIFICATIONS_ICON },
 ];
 
 const staffNavItems = [
-  { label: "Home", path: "/staff", icon: HOME_ICON, requiresAuth: true },
-  { label: "Manage Bookings", path: "/staff", icon: BOOKINGS_ICON, requiresAuth: true },
-  { label: "Notifications", path: "/staff/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
-  { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
+  { label: "Manage Bookings", path: "/staff", icon: BOOKINGS_ICON },
+  { label: "Notifications", path: "/staff/notifications", icon: NOTIFICATIONS_ICON },
 ];
 
 const adminNavItems = [
-  { label: "Home", path: "/admin", icon: HOME_ICON, requiresAuth: true },
-  { label: "Manage Bookings", path: "/admin/manage-bookings", icon: BOOKINGS_ICON, requiresAuth: true },
-  { label: "Manage Employees", path: "/admin/manage-employees", icon: USER_ICON, requiresAuth: true },
-  { label: "Manage Admins", path: "/admin/manage-admins", icon: USER_ICON, requiresAuth: true },
-  { label: "Manage Services", path: "/admin/manage-services", icon: MANAGE_SERVICES_ICON, requiresAuth: true },
-  { label: "Manage Users", path: "/admin/manage-users", icon: USER_ICON, requiresAuth: true },
-  { label: "Reports", path: "/admin/reports", icon: REPORTS_ICON, requiresAuth: true },
-  { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
+  { label: "Manage Bookings", path: "/admin/manage-bookings", icon: BOOKINGS_ICON },
+  { label: "Manage Employees", path: "/admin/manage-employees", icon: USER_ICON },
+  { label: "Manage Services", path: "/admin/manage-services", icon: MANAGE_SERVICES_ICON },
+  { label: "Manage Users", path: "/admin/manage-users", icon: USER_ICON },
+  { label: "Reports", path: "/admin/reports", icon: REPORTS_ICON },
 ];
 
 const guestRoutes = ["/", "/landing", "/guest", "/login", "/signup", "/role-switcher"];
 
-export function getNavigationByRole(role) {
-  const normalizedRole = (role || '').toLowerCase();
-  if (normalizedRole === 'admin') return adminNavItems;
-  if (normalizedRole === 'staff') return staffNavItems;
-  if (normalizedRole === 'rider') return riderNavItems;
-  return userNavItems;
-}
-
 export function getRoleNavigation(pathname = "") {
-  // Check storage first if available in this context
-  const activeRole = window.sessionStorage.getItem('activeRole');
-  if (activeRole) return getNavigationByRole(activeRole);
-
   if (pathname.startsWith("/admin")) return adminNavItems;
   if (pathname.startsWith("/rider")) return riderNavItems;
   if (pathname.startsWith("/staff")) return staffNavItems;

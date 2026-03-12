@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopNavbar from '../../shared/navigation/TopNavbar';
 import BottomNavbar from '../../shared/navigation/BottomNavbar';
-import { supabase } from '../../lib/supabase';
-
-const API_BASE = 'http://localhost:5000/api/v1/admin';
 
 const menuItems = [
 	{ label: 'Manage Bookings', path: '/admin/manage-bookings' },
 	{ label: 'Manage Employees', path: '/admin/manage-employees' },
-	{ label: 'Manage Admins', path: '/admin/manage-admins' },
 	{ label: 'Manage Services', path: '/admin/manage-services' },
 	{ label: 'Manage Users', path: '/admin/manage-users' },
 	{ label: 'Reports', path: '/admin/reports' },
@@ -17,29 +12,6 @@ const menuItems = [
 
 export default function AdminDashboard() {
 	const navigate = useNavigate();
-	const [stats, setStats] = useState({ total_bookings: 0, completed_bookings: 0, estimated_revenue: 0, formatted_revenue: '₱0.00' });
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		const fetchStats = async () => {
-			try {
-				const { data: { session } } = await supabase.auth.getSession();
-				const token = session?.access_token;
-				const response = await fetch(`${API_BASE}/dashboard-stats`, {
-					headers: { Authorization: `Bearer ${token}` }
-				});
-				if (response.ok) {
-					const data = await response.json();
-					setStats(data);
-				}
-			} catch (err) {
-				console.error('Error fetching admin stats:', err);
-			} finally {
-				setLoading(false);
-			}
-		};
-		fetchStats();
-	}, []);
 
 	return (
 		<div className="relative flex min-h-screen flex-col bg-white">
@@ -60,23 +32,7 @@ export default function AdminDashboard() {
 					</div>
 				</div>
 
-				<div className="mx-auto w-full max-w-md px-6 py-8 md:max-w-3xl lg:max-w-5xl">
-					{/* Stats Grid */}
-					<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-						<div className="rounded-2xl border border-[#3878c2]/20 bg-white p-4 text-center shadow-sm">
-							<p className="text-xs font-semibold uppercase tracking-wider text-[#b4b4b4]">Revenue</p>
-							<p className="mt-1 text-2xl font-black text-[#4bad40]">{loading ? '...' : stats.formatted_revenue}</p>
-						</div>
-						<div className="rounded-2xl border border-[#3878c2]/20 bg-white p-4 text-center shadow-sm">
-							<p className="text-xs font-semibold uppercase tracking-wider text-[#b4b4b4]">Active Bookings</p>
-							<p className="mt-1 text-2xl font-black text-[#3878c2]">{loading ? '...' : stats.total_bookings}</p>
-						</div>
-						<div className="rounded-2xl border border-[#3878c2]/20 bg-white p-4 text-center shadow-sm">
-							<p className="text-xs font-semibold uppercase tracking-wider text-[#b4b4b4]">Completed</p>
-							<p className="mt-1 text-2xl font-black text-herland-blue">{loading ? '...' : stats.completed_bookings}</p>
-						</div>
-					</div>
-
+				<div className="mx-auto w-full max-w-md flex-1 px-6 py-8 md:max-w-3xl lg:max-w-5xl">
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 						{menuItems.map((item) => (
 							<button

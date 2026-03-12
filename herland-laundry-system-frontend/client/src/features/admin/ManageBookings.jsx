@@ -199,8 +199,6 @@ export default function ManageBookings() {
   const [searchQuery, setSearchQuery] = useState("");
   const [amountDrafts, setAmountDrafts] = useState({});
   const [amountError, setAmountError] = useState("");
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
 
@@ -349,10 +347,8 @@ export default function ManageBookings() {
     }
 
     setAmountError("");
-    setSaveLoading(true);
-    setSaveSuccess("");
 
-    // Update local state immediately for responsiveness
+    // Update local state immediately
     setBookings((prev) =>
       prev.map((booking) => {
         if (booking.id !== bookingId) return booking;
@@ -372,9 +368,7 @@ export default function ManageBookings() {
       const token = session?.access_token;
       const dbId = targetBooking?.dbId || bookingId;
 
-      console.log(`Sending amount update for booking ${dbId}: ${parsedAmount}`);
-
-      const response = await fetch(`${API_BASE}/bookings/${dbId}/amount`, {
+      await fetch(`${API_BASE}/bookings/${dbId}/amount`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -382,21 +376,8 @@ export default function ManageBookings() {
         },
         body: JSON.stringify({ amountToPay: parsedAmount }),
       });
-
-      if (response.ok) {
-        setSaveSuccess("Amount saved successfully!");
-        // Clear success message after 3 seconds
-        setTimeout(() => setSaveSuccess(""), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to persist amount update:', response.status, errorData);
-        setAmountError(errorData.error || "Failed to save amount. Please try again.");
-      }
     } catch (error) {
-      console.error('Error persisting amount update:', error);
-      setAmountError("Could not connect to the server. Please check your connection.");
-    } finally {
-      setSaveLoading(false);
+      console.error('Failed to persist amount update:', error);
     }
   };
 
@@ -447,7 +428,7 @@ export default function ManageBookings() {
           </div>
         </header>
 
-        <div className="mb-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_160px_minmax(240px,auto)] md:items-center md:gap-3">
+        <div className="mb-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_160px_minmax(240px,auto)] md:items-center md:gap-3 ">
             <label htmlFor="booking-search" className="sr-only">
               Search by reference number or customer name
             </label>
@@ -457,7 +438,7 @@ export default function ManageBookings() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search reference # or customer"
-              className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0"
+              className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0 bg-white"
             />
 
             <FilterSelect
@@ -543,11 +524,7 @@ export default function ManageBookings() {
         const isPaymentConfirmed = paymentDetails.status.toLowerCase().includes("payment confirmed");
         const canConfirmPayment = canConfirmPaymentForBooking(selectedBooking);
         const isBookingConfirmed = selectedBooking.timeline.some(
-          (entry) => 
-            entry.status === "Booking Accepted" || 
-            entry.status === "Booking Edited" ||
-            entry.status === "Payment Confirmed" ||
-            selectedBooking.stage !== "received"
+          (entry) => entry.status === "Booking Accepted" || entry.status === "Booking Edited"
         );
         const weight = selectedBooking.serviceDetails?.weight;
         const notes = selectedBooking.notes || "-";
@@ -695,51 +672,26 @@ export default function ManageBookings() {
                               }));
                             }}
                             placeholder="Enter total amount"
-                            className={`h-10 w-full rounded-md border border-[#b4b4b4] px-3 text-sm ${
-                              isPaymentConfirmed ? "cursor-not-allowed bg-gray-100 text-gray-500" : "bg-white text-[#374151]"
+                            className={`h-10 w-full rounded-md border border-[#b4b4b4] px-3 text-sm bg-white ${
+                              isPaymentConfirmed ? "cursor-not-allowed bg-gray-100 text-gray-500" : "text-[#374151]"
                             }`}
                           />
                         </div>
                         <button
                           type="button"
                           onClick={() => saveAmountToPay(selectedBooking.id)}
-                          disabled={isPaymentConfirmed || saveLoading}
-                          className={`h-10 rounded-md px-4 text-sm font-semibold text-white transition-all ${
-                            isPaymentConfirmed || saveLoading 
-                              ? "cursor-not-allowed bg-[#9ca3af]" 
-                              : "bg-[#4bad40] hover:bg-[#439a39] active:scale-95"
-                          } flex items-center justify-center min-w-[120px]`}
+                          disabled={isPaymentConfirmed}
+                          className={`h-10 rounded-md px-4 text-sm font-semibold text-white ${
+                            isPaymentConfirmed ? "cursor-not-allowed bg-[#9ca3af]" : "bg-[#4bad40]"
+                          }`}
                         >
-                          {saveLoading ? (
-                            <div className="flex items-center gap-2">
-                              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Saving...
-                            </div>
-                          ) : "Save Amount"}
+                          Save Amount
                         </button>
                       </div>
                       {isPaymentConfirmed ? (
                         <p className="mt-2 text-xs text-[#374151]">Amount is locked because payment is already confirmed.</p>
                       ) : null}
-                      {saveSuccess ? (
-                        <div className="mt-2 flex items-center gap-1.5 text-xs text-[#4bad40] font-medium animate-pulse">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                          </svg>
-                          {saveSuccess}
-                        </div>
-                      ) : null}
-                      {amountError ? (
-                        <div className="mt-2 flex items-center gap-1.5 text-xs text-[#ff0000] font-medium">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                          </svg>
-                          {amountError}
-                        </div>
-                      ) : null}
+                      {amountError ? <p className="mt-2 text-xs text-[#ff0000]">{amountError}</p> : null}
                     </>
                   )}
                 </section>

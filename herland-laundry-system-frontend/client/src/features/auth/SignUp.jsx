@@ -23,7 +23,6 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInteracted, setIsInteracted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,7 +30,6 @@ export default function Signup() {
       ...prev,
       [name]: value,
     }));
-    if (!isInteracted) setIsInteracted(true);
   };
 
   // Password condition checks
@@ -142,7 +140,7 @@ export default function Signup() {
               value={formData.firstName}
               onChange={handleChange}
               placeholder="First Name"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -154,7 +152,7 @@ export default function Signup() {
               value={formData.lastName}
               onChange={handleChange}
               placeholder="Last Name"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -166,7 +164,7 @@ export default function Signup() {
               value={formData.phoneNumber}
               onChange={handleChange}
               placeholder="Phone Number"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -178,7 +176,7 @@ export default function Signup() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Email Address (optional)"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
           </div>
 
@@ -190,7 +188,7 @@ export default function Signup() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Password"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
             <span
               onClick={() => setShowPassword(!showPassword)}
@@ -238,15 +236,13 @@ export default function Signup() {
           </div>
 
           {/* Password Conditions */}
-          {isInteracted && (
-            <ul className="text-xs sm:text-sm text-[#ff0000] mb-3 list-none">
-              {!passwordStatus.length && <li>Must have at least 8 characters</li>}
-              {!passwordStatus.lowercase && <li>Must contain a lowercase letter</li>}
-              {!passwordStatus.uppercase && <li>Must contain an uppercase letter</li>}
-              {!passwordStatus.number && <li>Must contain a number</li>}
-              {!passwordStatus.specialChar && <li>Must contain a special character</li>}
-            </ul>
-          )}
+          <ul className="text-xs sm:text-sm text-[#ff0000] mb-3 list-none">
+            {!passwordStatus.length && <li>Must have at least 8 characters</li>}
+            {!passwordStatus.lowercase && <li>Must contain a lowercase letter</li>}
+            {!passwordStatus.uppercase && <li>Must contain an uppercase letter</li>}
+            {!passwordStatus.number && <li>Must contain a number</li>}
+            {!passwordStatus.specialChar && <li>Must contain a special character</li>}
+          </ul>
 
           {/* Confirm Password */}
           <div className="mb-3 relative">
@@ -256,7 +252,7 @@ export default function Signup() {
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="Confirm Password"
-              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
+              className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-white"
             />
             <span
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -301,10 +297,10 @@ export default function Signup() {
             </span>
 
             {/* Error Messages */}
-            {isInteracted && errors.requiredFields && (
+            {errors.requiredFields && (
               <p className="text-xs sm:text-sm text-[#ff0000] mt-1">{errors.requiredFields}</p>
             )}
-            {isInteracted && errors.confirmPassword && (
+            {errors.confirmPassword && (
               <p className="text-xs sm:text-sm text-[#ff0000] mt-1">{errors.confirmPassword}</p>
             )}
           </div>

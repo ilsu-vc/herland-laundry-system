@@ -18,20 +18,12 @@ export default function VerticalStepper({ steps = [] }) {
 						})
 					: null;
 
-				const isReached = !!step.timestamp;
-				const circleColor = isReached ? getStatusMeta(step.status).color : "#d1d5db";
+				const circleColor = getStatusMeta(step.status).color;
 
 				return (
-					<li 
-						key={`${step.status}-${index}`} 
-						className="mb-8 ml-6 transition-all duration-300"
-						style={{ 
-							filter: isReached ? "none" : "blur(1px) grayscale(100%)",
-							opacity: isReached ? 1 : 0.5
-						}}
-					>
+					<li key={`${step.status}-${index}`} className="mb-8 ml-6">
 						<span
-							className="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full shadow-sm"
+							className="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full"
 							style={{ backgroundColor: circleColor }}
 						></span>
 
