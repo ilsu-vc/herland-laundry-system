@@ -225,7 +225,7 @@ const userNavItems = [
 ];
 
 const riderNavItems = [
-  { label: "Manage Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
+  { label: "Manage Tasks", path: "/rider", icon: BOOKINGS_ICON, requiresAuth: true },
   { label: "Notifications", path: "/rider/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
 ];
 

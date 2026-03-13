@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 
 const TIME_SLOTS = [
   '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
-  '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', 
-  '20:00', '21:00', '22:00', '23:00'
+  '14:00', '15:00', '16:00'
 ];
 
 const formatTimeLabel = (timeStr) => {
-  const [hours, minutes] = timeStr.split(':');
+  const [hours] = timeStr.split(':');
   const h = parseInt(hours);
   const ampm = h >= 12 ? 'pm' : 'am';
   const displayH = h % 12 || 12;
@@ -21,6 +20,8 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedSlots, setBookedSlots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [customTime, setCustomTime] = useState('');
+  const [ampm, setAmpm] = useState('AM');
 
   useEffect(() => {
     const fetchBookedSlots = async () => {
@@ -67,31 +68,66 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
   };
 
   const handleDateClick = (day) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    if (clickedDate < today) return;
+
     const formattedDate = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     onDateChange(formattedDate);
+  };
+
+  const handleCustomTimeBlur = () => {
+    if (!customTime) return;
+    
+    // Parse input (like "9:30" or "9")
+    let [hours, minutes] = customTime.split(':').map(val => parseInt(val) || 0);
+    if (isNaN(hours)) return;
+
+    // Convert to 24h format based on AM/PM
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+
+    // Nearest hour logic: if minutes >= 30, round up, else round down
+    // But since the shop hours are blocks (e.g., 9:00 - 10:00), we usually snap to the start of the hour.
+    // User said: "9:30 --> it will be 9:00 - 10:00"
+    // This implies snapping to the HOUR start.
+    
+    const snapHour = hours;
+    const formattedHour = String(snapHour).padStart(2, '0') + ':00';
+    
+    if (TIME_SLOTS.includes(formattedHour)) {
+      onTimeChange(formattedHour);
+    } else {
+      alert("Please enter a time within operating hours (8:00 AM - 4:00 PM).");
+    }
   };
 
   const renderCalendar = () => {
     const totalDays = daysInMonth(currentMonth);
     const startDay = firstDayOfMonth(currentMonth);
     const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Empty slots for previous month days
     for (let i = 0; i < startDay; i++) {
       days.push(<div key={`empty-${i}`} className="h-10 w-full"></div>);
     }
 
-    // Actual days
     for (let d = 1; d <= totalDays; d++) {
       const selected = isSelectedDate(d);
       const booked = hasBookingsOnDate(d);
+      const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
+      const isPast = dateObj < today;
       
       days.push(
         <button
           key={d}
+          disabled={isPast}
           onClick={() => handleDateClick(d)}
           className={`h-10 w-full rounded-md flex items-center justify-center text-sm font-medium transition-colors ${
             selected ? 'bg-[#3878c2] text-white' : 
+            isPast ? 'text-gray-300 cursor-not-allowed' :
             booked ? 'bg-[#3878c2]/20 text-[#3878c2]' : 
             'hover:bg-gray-100 text-gray-700'
           }`}
@@ -123,7 +159,6 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
         </button>
       </div>
 
-      {/* Week Header */}
       <div className="bg-gray-100 grid grid-cols-7 gap-1 px-2 py-2">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
           <div key={day} className="text-center text-[10px] font-bold text-gray-500 uppercase">
@@ -132,47 +167,69 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
         ))}
       </div>
 
-      {/* Days Grid */}
       <div className="grid grid-cols-7 gap-1 p-2">
         {renderCalendar()}
       </div>
 
-      {/* Time Slots Section */}
       <div className="border-t border-gray-100 p-4 space-y-4">
         {selectedDate ? (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              {TIME_SLOTS.map(time => {
-                const day = new Date(selectedDate).getDate();
-                const count = getBookingCount(day, time);
-                const booked = count >= 8;
-                const active = selectedTime === time;
-                const remaining = 8 - count;
-                
-                return (
-                  <button
-                    key={time}
-                    disabled={booked}
-                    onClick={() => onTimeChange(time)}
-                    className={`px-3 py-2 text-[10px] font-medium border rounded-md transition-all ${
-                      active ? 'bg-[#3878c2] border-[#3878c2] text-white shadow-sm' : 
-                      booked ? 'bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed' :
-                      'bg-white border-gray-200 text-gray-600 hover:border-[#3878c2] hover:text-[#3878c2]'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center">
-                      <span>{formatTimeLabel(time)}</span>
-                      {booked ? (
-                        <span className="text-[8px] font-bold text-red-500">FULLY BOOKED</span>
-                      ) : count >= 5 ? (
-                        <span className="text-[8px] font-bold text-orange-500">{remaining} SLOTS LEFT</span>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-[#3878c2] uppercase mb-2">Select Time Slot</label>
+              <select 
+                value={selectedTime}
+                onChange={(e) => onTimeChange(e.target.value)}
+                className="w-full p-2.5 text-sm border border-gray-200 rounded-lg text-[#3878c2] bg-white focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
+              >
+                <option value="">Choose a schedule...</option>
+                {TIME_SLOTS.map(time => {
+                  const day = new Date(selectedDate).getDate();
+                  const count = getBookingCount(day, time);
+                  const booked = count >= 8;
+                  return (
+                    <option key={time} value={time} disabled={booked}>
+                      {formatTimeLabel(time)} {booked ? '(Fully Booked)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
-          </>
+
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-[#3878c2] uppercase mb-2">Or Type Time</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. 9:30"
+                  value={customTime}
+                  onChange={(e) => setCustomTime(e.target.value)}
+                  onBlur={handleCustomTimeBlur}
+                  className="w-full p-2.5 text-sm border border-gray-200 rounded-lg text-[#3878c2] bg-white focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
+                />
+              </div>
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                <button 
+                  onClick={() => { setAmpm('AM'); if (customTime) handleCustomTimeBlur(); }}
+                  className={`px-3 py-2.5 text-xs font-bold transition-colors ${ampm === 'AM' ? 'bg-[#3878c2] text-white' : 'bg-white text-gray-400'}`}
+                >
+                  AM
+                </button>
+                <button 
+                  onClick={() => { setAmpm('PM'); if (customTime) handleCustomTimeBlur(); }}
+                  className={`px-3 py-2.5 text-xs font-bold transition-colors ${ampm === 'PM' ? 'bg-[#3878c2] text-white' : 'bg-white text-gray-400'}`}
+                >
+                  PM
+                </button>
+              </div>
+            </div>
+
+            {selectedTime && (
+              <div className="p-3 bg-[#3878c2]/5 rounded-lg border border-[#3878c2]/10 flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#3878c2]">Selected: {formatTimeLabel(selectedTime)}</span>
+                <button onClick={() => onTimeChange('')} className="text-[10px] font-bold text-red-400 uppercase">Clear</button>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="py-8 text-center bg-gray-50 rounded-lg text-gray-400 text-sm font-medium">
             Please Pick a Date

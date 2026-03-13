@@ -6,6 +6,10 @@ import DateTimePicker from "../../shared/components/DateTimePicker";
 import { supabase } from "../../lib/supabase";
 import { formatDate, formatTime, getRouteAddresses } from "../../shared/utils/formatters";
 import BookingCalendar from "../../shared/components/BookingCalendar";
+import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from "@react-google-maps/api";
+
+const mapLibraries = ["places", "geocoding"];
+const defaultCenter = { lat: 14.537751, lng: 121.001379 }; // Pasay approximate
 
 /* =========================
    Parent Component
@@ -51,6 +55,18 @@ export default function BookNow() {
     date: "",
     time: "09:00",
   });
+  const [customerLocation, setCustomerLocation] = useState({
+    address: "",
+    lat: null,
+    lng: null
+  });
+  const [saveHomeAddress, setSaveHomeAddress] = useState(true);
+
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "").trim(),
+    libraries: mapLibraries,
+  });
 
   // Fetch available services and add-ons from backend
   useEffect(() => {
@@ -81,6 +97,34 @@ export default function BookNow() {
       }
     };
     fetchMetadata();
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      const fetchProfile = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const response = await fetch("http://localhost:5000/api/v1/customer/profile", {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (response.ok) {
+              const profile = await response.json();
+              if (profile.lat && profile.lng) {
+                setCustomerLocation({
+                  address: profile.address || "",
+                  lat: profile.lat,
+                  lng: profile.lng,
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load saved profile address:", err);
+        }
+      };
+      fetchProfile();
+    }
   }, [isEditMode]);
 
   useEffect(() => {
@@ -128,6 +172,13 @@ export default function BookNow() {
               date: data.collectionDetails.deliveryDate,
               time: data.collectionDetails.deliveryTime,
             });
+            if (data.collectionDetails.lat && data.collectionDetails.lng) {
+              setCustomerLocation({
+                address: data.collectionDetails.pickupAddress || data.collectionDetails.deliveryAddress,
+                lat: data.collectionDetails.lat,
+                lng: data.collectionDetails.lng
+              });
+            }
           }
         } catch (err) {
           console.error("Error fetching booking for edit:", err);
@@ -160,6 +211,22 @@ export default function BookNow() {
       setPaymentMethod("gcash");
     }
   }, [collectionInfo.option, paymentMethod]);
+
+  const calculateTotalEstimatedHours = () => {
+    let total = 0;
+    availableServices.forEach(s => {
+      if (services[s.name.toLowerCase()]) {
+        total += Number(s.estimatedHours) || 0;
+      }
+    });
+    availableAddons.forEach(a => {
+      const qty = Number(addons[a.name.toLowerCase()]) || 0;
+      if (qty > 0) {
+        total += (Number(a.estimatedHours) || 0) * qty;
+      }
+    });
+    return total;
+  };
 
   const handleStepChange = (newStep) => {
     // Check if moving to step 3 (Address) and request location permission
@@ -262,12 +329,20 @@ export default function BookNow() {
             setCollectionInfo={setCollectionInfo}
             deliveryInfo={deliveryInfo}
             setDeliveryInfo={setDeliveryInfo}
+            totalEstimatedHours={calculateTotalEstimatedHours()}
           />
         )}
         {step === 3 && (
           <StepAddress
             onBack={() => setStep(2)}
-            onNext={() => setStep(4)}
+            onNext={(location) => {
+              if (location) setCustomerLocation(location);
+              setStep(4);
+            }}
+            isMapLoaded={isMapLoaded}
+            initialLocation={customerLocation}
+            saveHomeAddress={saveHomeAddress}
+            setSaveHomeAddress={setSaveHomeAddress}
           />
         )}
         {step === 4 && (
@@ -281,12 +356,14 @@ export default function BookNow() {
             paymentMethod={paymentMethod}
             collectionInfo={collectionInfo}
             deliveryInfo={deliveryInfo}
+            customerLocation={customerLocation}
             notes={notes}
             setNotes={setNotes}
             numberOfBags={numberOfBags}
             bagDescription={bagDescription}
             isEditMode={isEditMode}
             editId={editId}
+            saveHomeAddress={saveHomeAddress}
           />
         )}
       </div>
@@ -321,7 +398,7 @@ function StepSelectServices({
     setServices((prev) => ({ ...prev, [key]: prev[key] === 0 ? 1 : 0 }));
   };
 
-  const ServiceCard = ({ title, price, value, onToggle }) => {
+  const ServiceCard = ({ title, price, estimatedHours, value, onToggle }) => {
     const selected = value === 1;
     return (
       <div
@@ -335,6 +412,9 @@ function StepSelectServices({
           <div className="min-w-0 pr-2">
             <h3 className="font-semibold text-[#3878c2]">{title}</h3>
             <p className="text-xs text-[#3878c2]">₱{price.toFixed(2)} per load</p>
+            {estimatedHours > 0 && (
+              <p className="text-[10px] text-gray-500 italic mt-0.5">~ {estimatedHours} hours</p>
+            )}
           </div>
           <button
             onClick={onToggle}
@@ -381,6 +461,7 @@ function StepSelectServices({
             key={s.id}
             title={s.name}
             price={s.currentPrice}
+            estimatedHours={s.estimatedHours}
             value={services[s.name.toLowerCase()]}
             onToggle={() => toggleService(s.name.toLowerCase())}
           />
@@ -398,6 +479,7 @@ function StepSelectServices({
             <AddonRow
               key={a.id}
               label={a.name}
+              estimatedHours={a.estimatedHours}
               value={addons[a.name.toLowerCase()]}
               onChange={(v) =>
                 setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
@@ -555,10 +637,15 @@ function QuantityInput({ value, onChange, allowDecimal }) {
   );
 }
 
-function AddonRow({ label, value, onChange, allowDecimal }) {
+function AddonRow({ label, estimatedHours, value, onChange, allowDecimal }) {
   return (
     <div className="flex items-center justify-between gap-2 mb-3">
-      <span className="text-sm text-[#3878c2] max-w-[60%] pr-2">{label}</span>
+      <div className="flex flex-col max-w-[60%] pr-2">
+        <span className="text-sm text-[#3878c2]">{label}</span>
+        {estimatedHours > 0 && (
+          <span className="text-[10px] text-gray-400 italic">~ {estimatedHours} hrs</span>
+        )}
+      </div>
       <QuantityInput
         value={value}
         onChange={onChange}
@@ -608,6 +695,7 @@ function StepCollection({
   setCollectionInfo,
   deliveryInfo,
   setDeliveryInfo,
+  totalEstimatedHours,
 }) {
   const optionLabels = {
     dropOffPickUpLater: "Drop-off & Pick up later",
@@ -639,10 +727,52 @@ function StepCollection({
     },
   };
 
+  const [isValidTime, setIsValidTime] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (collectionInfo.date && collectionInfo.time && deliveryInfo.date && deliveryInfo.time) {
+      const dropOff = new Date(`${collectionInfo.date}T${collectionInfo.time}`);
+      const pickUp = new Date(`${deliveryInfo.date}T${deliveryInfo.time}`);
+      const diffMs = pickUp - dropOff;
+      const diffHrs = diffMs / (1000 * 60 * 60);
+
+      // Add a small buffer of 0.01 to avoid floating point issues
+      if (diffHrs < totalEstimatedHours - 0.01) {
+        setIsValidTime(false);
+        setErrorMessage(`Pick-up time is too early. Selected services need about ${totalEstimatedHours} hours.`);
+      } else {
+        setIsValidTime(true);
+        setErrorMessage("");
+      }
+    }
+  }, [collectionInfo.date, collectionInfo.time, deliveryInfo.date, deliveryInfo.time, totalEstimatedHours]);
+
+  const handleNextSubmit = () => {
+    if (!isValidTime) {
+      alert(errorMessage);
+      return;
+    }
+    onNext();
+  };
+
   return (
     <div className="text-[#3878c2] space-y-6 px-0 sm:px-2">
       {/* Title */}
-      <h2 className="text-lg font-semibold">Collection & Delivery</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Collection & Delivery</h2>
+        {totalEstimatedHours > 0 && (
+          <div className="text-xs font-medium text-gray-500 italic">
+            Total Estimated Duration: {totalEstimatedHours} hours
+          </div>
+        )}
+      </div>
+
+      {!isValidTime && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-pulse">
+           ⚠️ {errorMessage}
+        </div>
+      )}
 
       {/* Options */}
       <div className="space-y-2">
@@ -751,8 +881,8 @@ function StepCollection({
           Back
         </button>
         <button
-          onClick={onNext}
-          className="px-4 py-2 rounded text-white bg-[#4bad40]"
+          onClick={handleNextSubmit}
+          className={`px-4 py-2 rounded text-white ${isValidTime ? 'bg-[#4bad40]' : 'bg-gray-400 cursor-not-allowed'}`}
         >
           Next
         </button>
@@ -808,103 +938,203 @@ function RadioRow({
 }
 
 /* =========================
-   Placeholder Steps
+   Step 3 - Address
 ========================= */
-function StepAddress({ onBack, onNext }) {
-  return (
-    <div className="relative min-h-[70vh] sm:min-h-[72vh] bg-[#ffffff] text-[#3878c2] pb-24 sm:pb-28 px-0 sm:px-2">
+function StepAddress({ onBack, onNext, isMapLoaded, initialLocation, saveHomeAddress, setSaveHomeAddress }) {
+  const [autocomplete, setAutocomplete] = useState(null);
+  const [location, setLocation] = useState(initialLocation?.lat ? initialLocation : { address: "", lat: null, lng: null });
+  const [mapCenter, setMapCenter] = useState(initialLocation?.lat ? { lat: initialLocation.lat, lng: initialLocation.lng } : defaultCenter);
+  const [searchValue, setSearchValue] = useState(initialLocation?.address || "");
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
-      <form className="absolute top-2 left-0 right-0 z-20 mx-auto max-w-2xl md:max-w-6xl lg:max-w-7xl px-0 sm:px-1">
-        <label htmlFor="simple-search" className="sr-only">
-          Search
-        </label>
+  const onLoad = (autoC) => setAutocomplete(autoC);
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      if (place.geometry && place.geometry.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const address = place.formatted_address || place.name;
+        setLocation({ address, lat, lng });
+        setMapCenter({ lat, lng });
+        setSearchValue(address);
+      }
+    }
+  };
+
+  const handleMapClick = (e) => {
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    setMapCenter({ lat, lng });
+    setIsGeocoding(true);
+
+    // Attempt reverse geocoding to get a human-readable address
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        setIsGeocoding(false);
+        if (status === "OK" && results && results[0]) {
+          const address = results[0].formatted_address;
+          setLocation({ address, lat, lng });
+          setSearchValue(address);
+        } else {
+          // Geocoding API not available yet — pin was dropped but address couldn't be resolved.
+          // Store a friendly label + coordinates so rider navigation still works.
+          setLocation({ address: "", lat, lng });
+          setSearchValue("");
+          // Prompt the customer to type their address in the search box
+          alert(
+            "📍 Your pin has been set!\n\nWe couldn't automatically detect your street name. Please type your full address (e.g. '123 Rizal St, Las Piñas') in the search bar above so we can record it correctly."
+          );
+        }
+      });
+    } catch {
+      setIsGeocoding(false);
+      setLocation({ address: "", lat, lng });
+      setSearchValue("");
+      alert(
+        "📍 Your pin has been set!\n\nPlease type your complete address in the search bar above so we can record it."
+      );
+    }
+  };
+
+  // Allow manual address typing when geocoding isn't available
+  const handleManualAddressConfirm = () => {
+    if (searchValue.trim().length > 3) {
+      setLocation((prev) => ({ ...prev, address: searchValue.trim() }));
+    }
+  };
+
+  const handleNext = () => {
+    if (!location.lat) {
+      alert("Please pin your location on the map or search for your address first.");
+      return;
+    }
+    if (!location.address || location.address.trim().length < 5) {
+      alert("Please confirm your address by searching for it or typing it in the search box above.");
+      return;
+    }
+    onNext(location);
+  };
+
+
+  return (
+    <div className="flex flex-col min-h-[70vh] sm:min-h-[72vh] bg-[#ffffff] text-[#3878c2] pb-6 px-0 sm:px-2 relative">
+      <div className="z-20 mx-auto w-full max-w-2xl md:max-w-6xl lg:max-w-7xl px-2 sm:px-1 pt-2 pb-4">
+        <label htmlFor="simple-search" className="sr-only">Search</label>
         <div className="flex items-center gap-2">
           {/* Back button */}
           <button
             type="button"
             onClick={onBack}
             aria-label="Go back"
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#3878c2]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#3878c2] bg-white shadow-sm"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-5 w-5 text-[#3878c2]"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-[#3878c2]">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
           </button>
 
-          {/* Search input */}
-          <div className="relative flex-1">
-            <input
-              type="text"
-              id="simple-search"
-              className="w-full px-3 py-2.5 text-sm rounded-lg border border-[#3878c2] bg-white text-[#3878c2] placeholder:text-[#b4b4b4] focus:outline-none focus:ring-[#3878c2] focus:border-[#3878c2]"
-              placeholder="Find your address"
-              required
-            />
+          {/* Autocomplete search */}
+          <div className="relative flex-1 bg-white shadow-sm rounded-lg">
+            {isMapLoaded ? (
+              <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
+                <input
+                  type="text"
+                  id="simple-search"
+                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-[#3878c2] bg-white text-[#3878c2] placeholder:text-[#b4b4b4] focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
+                  placeholder="Search for your address or tap the map..."
+                  value={searchValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchValue(val);
+                    // If the user is typing manually (pin set but no geocoded address yet), save the typed text as the address
+                    if (location.lat) {
+                      setLocation((prev) => ({ ...prev, address: val }));
+                    }
+                  }}
+                  onBlur={handleManualAddressConfirm}
+                />
+              </Autocomplete>
+            ) : (
+              <input
+                type="text"
+                disabled
+                className="w-full px-3 py-2.5 text-sm rounded-lg border border-[#3878c2] bg-gray-100 text-[#b4b4b4]"
+                placeholder="Loading map..."
+              />
+            )}
           </div>
-
-          {/* Search button */}
-          <button
-            type="submit"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#3878c2]"
-            aria-label="Search"
-          >
-            <svg
-              className="h-5 w-5 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="2"
-                d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-              />
-            </svg>
-          </button>
-        </div>
-
-      </form>
-
-      <div className="relative min-h-[40vh] sm:min-h-[52vh] bg-[#ffffff]">
-        <div className="absolute inset-0" aria-hidden="true"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="size-8 text-[#4bad40]"
-          >
-            <path
-              fillRule="evenodd"
-              d="m11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 0 0-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.145.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-              clipRule="evenodd"
-            />
-          </svg>
         </div>
       </div>
 
+      {/* Map area */}
+      <div className="relative flex-1 min-h-[40vh] mx-2 sm:mx-0 sm:min-h-[50vh] bg-gray-50 overflow-hidden rounded-xl border border-[#3878c2]/20 shadow-inner mb-28">
+        {isMapLoaded ? (
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+            center={mapCenter}
+            zoom={location.lat ? 17 : 13}
+            options={{ disableDefaultUI: false, zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: false }}
+            onClick={handleMapClick}
+          >
+            {location.lat && (
+              <Marker position={{ lat: location.lat, lng: location.lng }} />
+            )}
+          </GoogleMap>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3878c2] mb-2"></div>
+            <span className="text-sm font-semibold text-[#3878c2]">Loading Maps...</span>
+          </div>
+        )}
+
+        {/* Geocoding loading overlay */}
+        {isGeocoding && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10">
+            <div className="bg-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#3878c2]"></div>
+              <span className="text-xs text-[#3878c2] font-semibold">Getting address...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Tap hint if no location pinned yet */}
+        {isMapLoaded && !location.lat && !isGeocoding && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 text-[#3878c2] text-xs font-semibold px-4 py-2 rounded-full shadow-md pointer-events-none whitespace-nowrap">
+            📍 Tap the map to pin your location
+          </div>
+        )}
+      </div>
+
+      {/* Bottom dock */}
       <div
-        className="dock dock-xl absolute bottom-0 left-0 right-0 w-full px-0 pb-4 sm:px-2"
+        className="fixed sm:absolute bottom-0 left-0 right-0 w-full px-4 pt-4 pb-6 sm:px-6 shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.1)] rounded-t-3xl border-t border-[#3878c2]/20 z-30"
         style={{ backgroundColor: "#63bce6" }}
       >
-        <div className="mx-auto max-w-2xl md:max-w-6xl lg:max-w-7xl pb-3 pt-4">
+        <div className="mx-auto max-w-2xl text-center">
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-white uppercase tracking-wider">Selected Location</p>
+            <p className="text-sm font-bold text-white truncate">{location.address || "No location selected — tap map or search above"}</p>
+          </div>
+          {location.lat && (
+            <label className="flex items-center justify-center gap-2 mb-3 text-white cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={saveHomeAddress}
+                onChange={(e) => setSaveHomeAddress(e.target.checked)}
+                className="w-4 h-4 rounded border-white text-[#3878c2] focus:ring-[#3878c2]"
+              />
+              <span className="text-sm font-medium">Save as my home address</span>
+            </label>
+          )}
           <button
-            onClick={onNext}
-            className="w-full py-3 rounded-lg bg-[#ffffff] text-[#3878c2] font-semibold"
+            onClick={handleNext}
+            disabled={!location.lat || isGeocoding}
+            className={`w-full py-3 rounded-lg font-bold transition-all shadow-md ${!location.lat || isGeocoding ? "bg-white/50 text-[#3878c2]/50 cursor-not-allowed" : "bg-white text-[#3878c2] hover:bg-gray-50 active:scale-[0.98]"}`}
           >
-            Choose this location
+            {isGeocoding ? "Getting address..." : "Confirm this location"}
           </button>
         </div>
       </div>
@@ -922,12 +1152,14 @@ function StepReview({
   paymentMethod = "gcash",
   collectionInfo = { optionLabel: "-", date: "", time: "" },
   deliveryInfo = { date: "", time: "" },
+  customerLocation,
   notes,
   setNotes,
   numberOfBags,
   bagDescription,
   isEditMode,
   editId,
+  saveHomeAddress,
 }) {
   const navigate = useNavigate();
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -975,7 +1207,10 @@ function StepReview({
           <h3 className="font-semibold mb-2">Services Selected</h3>
           <ul className="list-disc list-inside text-sm">
             {availableServices.filter(s => services[s.name.toLowerCase()]).map(s => (
-              <li key={s.id}>{s.name} (₱{s.currentPrice.toFixed(2)} per load)</li>
+              <li key={s.id}>
+                {s.name} (₱{s.currentPrice.toFixed(2)} per load)
+                {s.estimatedHours > 0 && <span className="ml-1 text-[10px] text-gray-500 italic">- ~{s.estimatedHours} hrs</span>}
+              </li>
             ))}
             {availableServices.filter(s => services[s.name.toLowerCase()]).length === 0 && <li>None</li>}
           </ul>
@@ -999,6 +1234,7 @@ function StepReview({
               {availableAddons.filter(a => Number(addons[a.name.toLowerCase()]) > 0).map(a => (
                 <li key={a.id}>
                   {a.name}: {addons[a.name.toLowerCase()]} pcs (₱{(a.currentPrice * addons[a.name.toLowerCase()]).toFixed(2)})
+                  {a.estimatedHours > 0 && <span className="ml-1 text-[10px] text-gray-500 italic">- ~{a.estimatedHours} hrs ea.</span>}
                 </li>
               ))}
             </ul>
@@ -1100,6 +1336,17 @@ function StepReview({
               .map(([addonName, quantity]) => ({ name: addonName, quantity }));
 
             const routeAddresses = getRouteAddresses(collectionInfo.option);
+            
+            // Override with precise locations if applicable
+            let finalPickup = routeAddresses.pickupAddress;
+            let finalDelivery = routeAddresses.deliveryAddress;
+            
+            if (collectionInfo.option === "pickedUpDelivered") {
+               finalPickup = customerLocation?.address || routeAddresses.pickupAddress;
+               finalDelivery = customerLocation?.address || routeAddresses.deliveryAddress;
+            } else if (collectionInfo.option === "dropOffDelivered") {
+               finalDelivery = customerLocation?.address || routeAddresses.deliveryAddress;
+            }
 
             const payload = {
               reference_number: nextReference,
@@ -1122,8 +1369,11 @@ function StepReview({
                 collectionTime: collectionInfo.time || "",
                 deliveryDate: deliveryInfo.date || "",
                 deliveryTime: deliveryInfo.time || "",
-                pickupAddress: routeAddresses.pickupAddress,
-                deliveryAddress: routeAddresses.deliveryAddress,
+                pickupAddress: finalPickup,
+                deliveryAddress: finalDelivery,
+                customerAddress: customerLocation?.address || null,
+                lat: customerLocation?.lat || null,
+                lng: customerLocation?.lng || null,
               },
               payment_details: {
                 method: paymentMethod === "gcash" ? "GCash" : "Cash",
@@ -1164,6 +1414,26 @@ function StepReview({
                   alert("Booking updated successfully.");
                   navigate(`/bookings/${editId}`);
                   return;
+                }
+
+                // If non-edit mode and user wants to save their address, store it in their profile
+                if (saveHomeAddress && customerLocation?.lat) {
+                  try {
+                    await fetch("http://localhost:5000/api/v1/customer/profile", {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        address: customerLocation.address,
+                        lat: customerLocation.lat,
+                        lng: customerLocation.lng,
+                      })
+                    });
+                  } catch (e) {
+                    console.error("Failed to save home address to profile:", e);
+                  }
                 }
 
                  setBookingStatus("success");

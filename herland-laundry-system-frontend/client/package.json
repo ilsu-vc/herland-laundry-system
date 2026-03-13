@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.97.0",
     "flowbite": "^4.0.1",
     "pagedone": "^1.2.2",
@@ -18,7 +19,8 @@
     "react-dom": "^18.3.1",
     "react-is": "^19.2.4",
     "react-router-dom": "^6.22.0",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "use-places-autocomplete": "^4.0.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

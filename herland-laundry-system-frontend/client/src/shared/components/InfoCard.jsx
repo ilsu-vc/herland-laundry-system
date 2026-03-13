@@ -36,12 +36,14 @@ export default function InfoCard({
       </div>
 
       <div className="p-5 flex-1 flex flex-col gap-2 min-w-0">
-        <button onClick={() => onToggleExpand(id)} className="text-left w-full">
-          <h2 className="text-sm font-semibold text-[#3878c2] break-words">{name}</h2>
-          {subtitle && <p className="text-sm text-[#374151] mt-0.5">{subtitle}</p>}
-          <div className="mt-0.5 flex items-center justify-between gap-2">
-            <p className="text-sm text-[#374151]">{meta}</p>
-            <p className="text-[10px] font-bold text-[#3878c2] whitespace-nowrap">{isExpanded ? 'Collapse' : 'Expand'}</p>
+        <button onClick={() => onToggleExpand(id)} className="text-left w-full min-w-0">
+          <h2 className="text-sm font-semibold text-[#3878c2] truncate">{name}</h2>
+          {subtitle && <p className="text-xs font-bold text-[#374151] mt-0.5 truncate">{subtitle}</p>}
+          <div className="mt-0.5 flex items-center justify-between gap-3 min-w-0">
+            <p className="text-[11px] text-[#374151] truncate flex-1">{meta}</p>
+            <span className="text-[10px] font-bold text-[#3878c2] uppercase tracking-wider shrink-0 bg-[#f0f6ff] px-1.5 py-0.5 rounded">
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </span>
           </div>
         </button>
 

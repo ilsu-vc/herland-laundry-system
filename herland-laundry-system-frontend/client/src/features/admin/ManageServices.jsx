@@ -53,8 +53,8 @@ export default function ManageServices() {
       const servicesRes = await fetch(`${API_BASE}/services`, { headers: authHeaders });
       if (servicesRes.ok) {
         const data = await servicesRes.json();
-        if (data.services && data.services.length > 0) setServices(data.services);
-        if (data.addOns && data.addOns.length > 0) setAddOns(data.addOns);
+        if (data.services) setServices(data.services);
+        if (data.addOns) setAddOns(data.addOns);
         if (data.schedule) {
           setSchedule({ opens: data.schedule.opens, closes: data.schedule.closes });
           if (data.schedule.previousOpens || data.schedule.previousCloses) {
@@ -89,13 +89,13 @@ export default function ManageServices() {
   const [editingFaqId, setEditingFaqId] = useState(null);
   const [selectedTermsFile, setSelectedTermsFile] = useState(null);
   const [termsDocument, setTermsDocument] = useState(null);
-  const [serviceDraft, setServiceDraft] = useState({ name: '', currentPrice: '' });
-  const [addOnDraft, setAddOnDraft] = useState({ name: '', currentPrice: '' });
+  const [serviceDraft, setServiceDraft] = useState({ name: '', currentPrice: '', estimatedHours: '' });
+  const [addOnDraft, setAddOnDraft] = useState({ name: '', currentPrice: '', estimatedHours: '' });
+  const [editItem, setEditItem] = useState({ name: '', currentPrice: 0, estimatedHours: 0 });
 
   // UI State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editType, setEditType] = useState(null);
-  const [editItem, setEditItem] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -162,10 +162,14 @@ export default function ManageServices() {
         await fetch(`${API_BASE}/services/items/${editItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ currentPrice: updatedPrice, previousPrice: oldPrice }),
+          body: JSON.stringify({
+            currentPrice: editItem.currentPrice,
+            previousPrice: oldPrice,
+            estimatedHours: editItem.estimatedHours,
+          }),
         });
       } catch (error) {
-        console.error('Failed to persist price update:', error);
+        console.error('Failed to persist price/hours update:', error);
       }
     } else {
       if (schedule.opens !== editItem.opens || schedule.closes !== editItem.closes) {
@@ -308,6 +312,7 @@ export default function ManageServices() {
     const label = type === 'service' ? 'Service' : 'Add-On';
     const name = draft.name.trim();
     const price = Number(draft.currentPrice);
+    const hours = Number(draft.estimatedHours || 0);
 
     if (!name || Number.isNaN(price) || price < 0) return;
 
@@ -330,7 +335,7 @@ export default function ManageServices() {
       const response = await fetch(`${API_BASE}/services/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ type, name, currentPrice: price }),
+        body: JSON.stringify({ type, name, currentPrice: price, estimatedHours: hours }),
       });
       if (response.ok) {
         const data = await response.json();
@@ -347,6 +352,7 @@ export default function ManageServices() {
         name,
         currentPrice: price,
         previousPrice: null,
+        estimatedHours: hours,
       },
     ]);
 
@@ -355,12 +361,12 @@ export default function ManageServices() {
         id: Date.now(),
         timestamp: `${formattedDate} at ${formattedTime}`,
         message: `Added ${name} ${label}`,
-        details: `Initial price set to ₱${price.toFixed(2)}`,
+        details: `Initial price set to ₱${price.toFixed(2)}${hours > 0 ? `, est. ${hours} hrs` : ''}`,
       },
       ...prev,
     ]);
 
-    setDraft({ name: '', currentPrice: '' });
+    setDraft({ name: '', currentPrice: '', estimatedHours: '' });
     setShowSuccessModal(true);
     setTimeout(() => setShowSuccessModal(false), 1500);
   };
@@ -605,6 +611,17 @@ export default function ManageServices() {
                   placeholder="Price"
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
                 />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={serviceDraft.estimatedHours}
+                  onChange={(event) =>
+                    handleItemDraftChange('service', 'estimatedHours', event.target.value)
+                  }
+                  placeholder="Hours"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                />
                 <button
                   type="button"
                   onClick={() => handleAddItem('service')}
@@ -614,28 +631,32 @@ export default function ManageServices() {
                 </button>
               </div>
 
-              <div className="mb-4 flex items-center border-b border-gray-100 pb-3 text-sm font-normal text-[#374151]">
+              <div className="mb-4 flex items-center border-b border-gray-100 pb-3 text-[10px] sm:text-xs md:text-sm font-semibold text-[#374151] px-1">
                 <span className="flex-[1.5] text-left">Services</span>
-                <span className="flex-1 text-left">Current Price</span>
-                <span className="flex-1 text-left">Previous Price</span>
-                <div className="w-28"></div>
+                <span className="flex-1 text-center sm:text-left px-1">Current Price</span>
+                <span className="flex-1 text-center sm:text-left px-1">Prev. Price</span>
+                <span className="flex-1 text-center sm:text-left px-1">Hours</span>
+                <div className="w-24 sm:w-28 shrink-0"></div>
               </div>
               <div className="space-y-4">
                 {services.map((s) => (
-                  <div key={s.id} className="flex items-center rounded-xl border border-gray-100 px-3 py-3">
-                    <span className="flex-[1.5] text-left text-sm font-semibold text-gray-800">
+                  <div key={s.id} className="flex items-center rounded-xl border border-gray-100 p-2 sm:px-3 sm:py-3 gap-2">
+                    <span className="flex-[1.5] text-left text-xs sm:text-sm font-bold text-gray-800 truncate">
                       {s.name}
                     </span>
-                    <span className="flex-1 text-left text-sm font-semibold text-[#3878c2]">
+                    <span className="flex-1 text-center sm:text-left text-xs sm:text-sm font-bold text-[#3878c2]">
                       ₱{s.currentPrice.toFixed(2)}
                     </span>
-                    <span className="flex-1 text-left text-sm font-medium text-gray-400">
+                    <span className="flex-1 text-center sm:text-left text-[10px] sm:text-sm font-medium text-gray-400">
                       {s.previousPrice ? `₱${s.previousPrice.toFixed(2)}` : '-'}
                     </span>
-                    <div className="w-28 flex justify-end gap-2">
+                    <span className="flex-1 text-center sm:text-left text-xs sm:text-sm font-medium text-gray-600">
+                      {s.estimatedHours || 0} hrs
+                    </span>
+                    <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2 w-24 sm:w-28">
                       <button
                         onClick={() => handleEditClick('service', s)}
-                        className="rounded-xl p-2 text-gray-600 transition-all hover:bg-[#3878c2]/10"
+                        className="rounded-lg p-1.5 text-gray-600 transition-all hover:bg-[#3878c2]/5 sm:p-2 sm:hover:bg-[#3878c2]/10"
                         aria-label={`Edit ${s.name}`}
                       >
                         <svg
@@ -644,7 +665,7 @@ export default function ManageServices() {
                           viewBox="0 0 24 24"
                           strokeWidth={1.5}
                           stroke="currentColor"
-                          className="size-5"
+                          className="size-4 sm:size-5"
                         >
                           <path
                             strokeLinecap="round"
@@ -656,7 +677,7 @@ export default function ManageServices() {
                       <button
                         onClick={() => handleRevert('service', s)}
                         disabled={s.previousPrice === null}
-                        className={`rounded-xl p-2 text-gray-600 transition-all hover:bg-[#3878c2]/10 ${
+                        className={`rounded-lg p-1.5 text-gray-600 transition-all hover:bg-[#3878c2]/5 sm:p-2 sm:hover:bg-[#3878c2]/10 ${
                           s.previousPrice === null
                             ? 'opacity-20 cursor-not-allowed'
                             : 'opacity-100'
@@ -669,7 +690,7 @@ export default function ManageServices() {
                           viewBox="0 0 24 24"
                           strokeWidth={1.5}
                           stroke="currentColor"
-                          className="size-5"
+                          className="size-4 sm:size-5"
                         >
                           <path
                             strokeLinecap="round"
@@ -680,7 +701,7 @@ export default function ManageServices() {
                       </button>
                       <button
                         onClick={() => handleDeleteItem('service', s)}
-                        className="rounded-xl p-2 text-red-500 transition-all hover:bg-red-50"
+                        className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 sm:p-2"
                         aria-label={`Delete ${s.name}`}
                       >
                         <svg
@@ -689,7 +710,7 @@ export default function ManageServices() {
                           viewBox="0 0 24 24"
                           strokeWidth={1.5}
                           stroke="currentColor"
-                          className="size-5"
+                          className="size-4 sm:size-5"
                         >
                           <path
                             strokeLinecap="round"
@@ -728,6 +749,17 @@ export default function ManageServices() {
                   placeholder="Price"
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
                 />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={addOnDraft.estimatedHours}
+                  onChange={(event) =>
+                    handleItemDraftChange('addon', 'estimatedHours', event.target.value)
+                  }
+                  placeholder="Hours"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                />
                 <button
                   type="button"
                   onClick={() => handleAddItem('addon')}
@@ -737,28 +769,32 @@ export default function ManageServices() {
                 </button>
               </div>
 
-              <div className="mb-4 flex items-center border-b border-gray-100 pb-3 text-sm font-normal text-[#374151]">
+              <div className="mb-4 flex items-center border-b border-gray-100 pb-3 text-[10px] sm:text-xs md:text-sm font-semibold text-[#374151] px-1">
                 <span className="flex-[1.5] text-left">Add-On</span>
-                <span className="flex-1 text-left">Current Price</span>
-                <span className="flex-1 text-left">Previous Price</span>
-                <div className="w-28"></div>
+                <span className="flex-1 text-center sm:text-left px-1">Current Price</span>
+                <span className="flex-1 text-center sm:text-left px-1">Prev. Price</span>
+                <span className="flex-1 text-center sm:text-left px-1">Hours</span>
+                <div className="w-24 sm:w-28 shrink-0"></div>
               </div>
               <div className="space-y-4">
                 {addOns.map((item) => (
-                  <div key={item.id} className="flex items-center rounded-xl border border-gray-100 px-3 py-3">
-                    <span className="flex-[1.5] text-left text-sm font-semibold text-gray-800">
+                  <div key={item.id} className="flex items-center rounded-xl border border-gray-100 p-2 sm:px-3 sm:py-3 gap-2">
+                    <span className="flex-[1.5] text-left text-xs sm:text-sm font-bold text-gray-800 truncate">
                       {item.name}
                     </span>
-                    <span className="flex-1 text-left text-sm font-semibold text-[#3878c2]">
+                    <span className="flex-1 text-center sm:text-left text-xs sm:text-sm font-bold text-[#3878c2]">
                       ₱{item.currentPrice.toFixed(2)}
                     </span>
-                    <span className="flex-1 text-left text-sm font-medium text-gray-400">
+                    <span className="flex-1 text-center sm:text-left text-[10px] sm:text-sm font-medium text-gray-400">
                       {item.previousPrice ? `₱${item.previousPrice.toFixed(2)}` : '-'}
                     </span>
-                    <div className="w-28 flex justify-end gap-2">
+                    <span className="flex-1 text-center sm:text-left text-xs sm:text-sm font-medium text-gray-600">
+                      {item.estimatedHours || 0} hrs
+                    </span>
+                    <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2 w-24 sm:w-28">
                       <button
                         onClick={() => handleEditClick('addon', item)}
-                        className="rounded-xl p-2 text-gray-600 transition-all hover:bg-[#3878c2]/10"
+                        className="rounded-lg p-1.5 text-gray-600 transition-all hover:bg-[#3878c2]/5 sm:p-2 sm:hover:bg-[#3878c2]/10"
                         aria-label={`Edit ${item.name}`}
                       >
                         <svg
@@ -767,7 +803,7 @@ export default function ManageServices() {
                           viewBox="0 0 24 24"
                           strokeWidth={1.5}
                           stroke="currentColor"
-                          className="size-5"
+                          className="size-4 sm:size-5"
                         >
                           <path
                             strokeLinecap="round"
@@ -779,7 +815,7 @@ export default function ManageServices() {
                       <button
                         onClick={() => handleRevert('addon', item)}
                         disabled={item.previousPrice === null}
-                        className={`rounded-xl p-2 text-gray-600 transition-all hover:bg-[#3878c2]/10 ${
+                        className={`rounded-lg p-1.5 text-gray-600 transition-all hover:bg-[#3878c2]/5 sm:p-2 sm:hover:bg-[#3878c2]/10 ${
                           item.previousPrice === null
                             ? 'opacity-20 cursor-not-allowed'
                             : 'opacity-100'
@@ -792,7 +828,7 @@ export default function ManageServices() {
                           viewBox="0 0 24 24"
                           strokeWidth={1.5}
                           stroke="currentColor"
-                          className="size-5"
+                          className="size-4 sm:size-5"
                         >
                           <path
                             strokeLinecap="round"
@@ -803,7 +839,7 @@ export default function ManageServices() {
                       </button>
                       <button
                         onClick={() => handleDeleteItem('addon', item)}
-                        className="rounded-xl p-2 text-red-500 transition-all hover:bg-red-50"
+                        className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 sm:p-2"
                         aria-label={`Delete ${item.name}`}
                       >
                         <svg
@@ -812,7 +848,7 @@ export default function ManageServices() {
                           viewBox="0 0 24 24"
                           strokeWidth={1.5}
                           stroke="currentColor"
-                          className="size-5"
+                          className="size-4 sm:size-5"
                         >
                           <path
                             strokeLinecap="round"
@@ -1069,19 +1105,34 @@ export default function ManageServices() {
               </h3>
 
               {editType === 'service' || editType === 'addon' ? (
-                <div className="mt-4">
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Price</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={editItem?.currentPrice ?? 0}
-                    onChange={(event) =>
-                      setEditItem((prev) => ({ ...prev, currentPrice: Number(event.target.value) }))
-                    }
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
-                  />
-                </div>
+                <>
+                  <div className="mt-4">
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Price</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editItem?.currentPrice ?? 0}
+                      onChange={(event) =>
+                        setEditItem((prev) => ({ ...prev, currentPrice: Number(event.target.value) }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Estimated Hours</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={editItem?.estimatedHours ?? 0}
+                      onChange={(event) =>
+                        setEditItem((prev) => ({ ...prev, estimatedHours: Number(event.target.value) }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
+                    />
+                  </div>
+                </>
               ) : (
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div>

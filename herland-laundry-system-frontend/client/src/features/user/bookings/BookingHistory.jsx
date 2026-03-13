@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ACTIVE_STATUSES, PAST_STATUSES, getStatusMeta, getStatusKey } from "../../../shared/components/StatusMeta";
 import { supabase } from "../../../lib/supabase";
@@ -50,8 +50,19 @@ function mapBookingToCard(booking) {
   };
 }
 
+function getMonthYear(dateString) {
+  if (!dateString || dateString === "-") return null;
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 export default function BookingHistory() {
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [selectedMonth, setSelectedMonth] = useState("All Time");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -95,13 +106,43 @@ export default function BookingHistory() {
     fetchBookings();
   }, [fetchBookings]);
 
-  // Filter bookings based on selected filter
-  const filteredBookings = bookings.filter((booking) => {
-    if (selectedFilter === "All") return true;
-    if (selectedFilter === "Active") return ACTIVE_STATUSES.includes(booking.status);
-    if (selectedFilter === "Past") return PAST_STATUSES.includes(booking.status);
-    return true;
-  });
+  // Extract unique months for the dropdown
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    bookings.forEach(b => {
+      const my = getMonthYear(b.date);
+      if (my) months.add(my);
+    });
+    return ["All Time", ...Array.from(months).sort((a, b) => new Date(b) - new Date(a))];
+  }, [bookings]);
+
+  // Filter bookings based on selected filter and month
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((booking) => {
+      // 1. Status Filter
+      if (selectedFilter === "Active" && !ACTIVE_STATUSES.includes(booking.status)) return false;
+      if (selectedFilter === "Past" && !PAST_STATUSES.includes(booking.status)) return false;
+
+      // 2. Month Filter
+      if (selectedMonth !== "All Time") {
+        const my = getMonthYear(booking.date);
+        if (my !== selectedMonth) return false;
+      }
+
+      return true;
+    });
+  }, [bookings, selectedFilter, selectedMonth]);
+
+  // Reset to page 1 if filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilter, selectedMonth]);
+
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="min-h-screen bg-white px-4 py-6 sm:py-10">
@@ -121,6 +162,15 @@ export default function BookingHistory() {
             <h1 className="text-2xl font-semibold">Booking History</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="rounded-full px-3 py-1.5 text-xs sm:px-4 sm:text-sm font-semibold border border-[#3878c2] text-[#3878c2] bg-white outline-none cursor-pointer"
+            >
+              {availableMonths.map(month => (
+                <option key={month} value={month}>{month}</option>
+              ))}
+            </select>
             {FILTERS.map((filter) => {
               const isActive = filter === selectedFilter;
               return (
@@ -161,78 +211,103 @@ export default function BookingHistory() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {filteredBookings.map((booking, index) => {
-              const statusMeta = getStatusMeta(booking.status);
-              return (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {paginatedBookings.map((booking, index) => {
+                const statusMeta = getStatusMeta(booking.status);
+                return (
+                  <button
+                    key={`${booking.id}-${index}`}
+                    type="button"
+                    onClick={() => navigate(`/bookings/${encodeURIComponent(booking.id)}`)}
+                    className="relative w-full rounded-2xl border border-[#3878c2] bg-white text-left shadow-sm overflow-hidden transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#63bce6]/60"
+                  >
+                    <div
+                      className="absolute left-0 top-0 bottom-0 w-2"
+                      style={{ backgroundColor: statusMeta.color }}
+                    />
+
+                    <div className="relative p-5 flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <h2 className="text-sm font-semibold text-[#3878c2] break-all">
+                          {booking.id}
+                        </h2>
+                        <span
+                          className="flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold md:hidden"
+                          style={{
+                            color: statusMeta.color,
+                            backgroundColor: `${statusMeta.color}22`,
+                          }}
+                        >
+                          {statusMeta.label}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-4">
+                        <p className="text-xs text-[#374151]">
+                          Booking received on {booking.date}
+                        </p>
+                        <span
+                          className="hidden w-fit rounded-full px-3 py-1 text-xs font-semibold md:inline-flex"
+                          style={{
+                            color: statusMeta.color,
+                            backgroundColor: `${statusMeta.color}22`,
+                          }}
+                        >
+                          {statusMeta.label}
+                        </span>
+                      </div>
+
+                      <div className="mt-5 flex flex-col gap-4">
+                        <div className="rounded-xl p-0.5">
+                          <p className="text-sm font-semibold text-[#3878c2]">
+                            {booking.from.type}
+                          </p>
+                          <p className="mt-1 text-sm text-[#374151]">
+                            {booking.from.address}
+                          </p>
+                        </div>
+
+                        <hr className="border-t-1 border-[#3878c2] w-11/12 mx-auto" />
+
+                        <div className="rounded-xl p-0.5">
+                          <p className="text-sm font-semibold text-[#3878c2]">
+                            {booking.to.type}
+                          </p>
+                          <p className="mt-1 text-sm text-[#374151]">
+                            {booking.to.address}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-4">
                 <button
-                  key={`${booking.id}-${index}`}
-                  type="button"
-                  onClick={() => navigate(`/bookings/${encodeURIComponent(booking.id)}`)}
-                  className="relative w-full rounded-2xl border border-[#3878c2] bg-white text-left shadow-sm overflow-hidden transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#63bce6]/60"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-[#3878c2] px-4 py-2 text-sm font-semibold text-[#3878c2] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3878c2]/5 transition"
                 >
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-2"
-                    style={{ backgroundColor: statusMeta.color }}
-                  />
-
-                  <div className="relative p-5 flex flex-col gap-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <h2 className="text-sm font-semibold text-[#3878c2] break-all">
-                        {booking.id}
-                      </h2>
-                      <span
-                        className="flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold md:hidden"
-                        style={{
-                          color: statusMeta.color,
-                          backgroundColor: `${statusMeta.color}22`,
-                        }}
-                      >
-                        {statusMeta.label}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                      <p className="text-xs text-[#374151]">
-                        Booking received on {booking.date}
-                      </p>
-                      <span
-                        className="hidden w-fit rounded-full px-3 py-1 text-xs font-semibold md:inline-flex"
-                        style={{
-                          color: statusMeta.color,
-                          backgroundColor: `${statusMeta.color}22`,
-                        }}
-                      >
-                        {statusMeta.label}
-                      </span>
-                    </div>
-
-                    <div className="mt-5 flex flex-col gap-4">
-                      <div className="rounded-xl p-0.5">
-                        <p className="text-sm font-semibold text-[#3878c2]">
-                          {booking.from.type}
-                        </p>
-                        <p className="mt-1 text-sm text-[#374151]">
-                          {booking.from.address}
-                        </p>
-                      </div>
-
-                      <hr className="border-t-1 border-[#3878c2] w-11/12 mx-auto" />
-
-                      <div className="rounded-xl p-0.5">
-                        <p className="text-sm font-semibold text-[#3878c2]">
-                          {booking.to.type}
-                        </p>
-                        <p className="mt-1 text-sm text-[#374151]">
-                          {booking.to.address}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  Previous
                 </button>
-              );
-            })}
-          </div>
+                <span className="text-sm font-medium text-[#374151]">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg bg-[#3878c2] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2d62a3] shadow-sm transition"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

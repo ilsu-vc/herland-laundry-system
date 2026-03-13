@@ -104,9 +104,11 @@ export default function RiderDashboard() {
 				pickupAddress: collectionDetails.pickupAddress || fallbackRoute.pickupAddress,
 				pickupDate: collectionDetails.collectionDate || '',
 				pickupTime: collectionDetails.collectionTime || '',
-				deliveryAddress: booking.customerAddress || collectionDetails.deliveryAddress || fallbackRoute.deliveryAddress,
+				deliveryAddress: collectionDetails.customerAddress || collectionDetails.deliveryAddress || fallbackRoute.deliveryAddress,
 				deliveryDate: collectionDetails.deliveryDate || '',
 				deliveryTime: collectionDetails.deliveryTime || '',
+				lat: collectionDetails.lat || null,
+				lng: collectionDetails.lng || null,
 			}
 		})
 	}
@@ -275,55 +277,42 @@ export default function RiderDashboard() {
 
 							<div className="mt-8 rounded-2xl border border-[#3878c2]/20 p-6 bg-[#f9fbff]">
 								<div className="flex items-center justify-between mb-4">
-									<p className="text-xs font-bold text-[#3878c2] uppercase tracking-wider">Route View</p>
-									<span className="flex items-center gap-1.5 rounded-full bg-[#4bad40]/10 px-2.5 py-1 text-[10px] font-bold text-[#4bad40] uppercase">
-										<span className="relative flex h-2 w-2">
-											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4bad40] opacity-75"></span>
-											<span className="relative inline-flex rounded-full h-2 w-2 bg-[#4bad40]"></span>
-										</span>
-										Live GPS
-									</span>
+									<p className="text-xs font-bold text-[#3878c2] uppercase tracking-wider">Navigation</p>
 								</div>
 								
-								<div className="relative group overflow-hidden rounded-xl border border-[#3878c2]/20 bg-white aspect-video flex items-center justify-center shadow-inner">
-									{/* The Map Placeholder Image */}
-									<img 
-										src="/images/rider_map_placeholder.png" 
-										alt="Map showing route"
-										className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
-										onError={(e) => {
-											e.target.style.display = 'none';
-											e.target.nextSibling.style.display = 'flex';
-										}}
-									/>
-									
-									{/* Fallback & Overlay UI */}
-									<div className="hidden absolute inset-0 flex-col items-center justify-center bg-[#f0f7ff] text-[#3878c2] p-8 text-center">
-										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 mb-3 opacity-20">
-											<path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-10.5v.75m.103 8.15a2.25 2.25 0 1 1-4.422-.585 2.25 2.25 0 0 1 4.422.585ZM5.25 9a2.25 2.25 0 0 0 3 2.235V15a2.25 2.25 0 0 0 2.25 2.25h8.25a2.25 2.25 0 0 0 2.25-2.25v-1.5a2.25 2.25 0 0 0-2.25-2.25H11.107a2.25 2.25 0 0 0-2.235-3A2.25 2.25 0 0 0 5.25 9Z" />
-										</svg>
-										<p className="text-sm font-semibold">Map Service Offline</p>
-										<p className="text-[10px] uppercase tracking-widest mt-1 opacity-50">Integration Pending</p>
-									</div>
-
-									{/* Decorative Map Overlay */}
-									<div className="absolute inset-0 bg-gradient-to-t from-[#3878c2]/10 to-transparent pointer-events-none" />
-									
-									{/* Centered Info Label */}
-									<div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm border border-[#3878c2]/20 p-3 rounded-xl shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
-										<div className="flex items-center gap-3">
-											<div className="h-2 w-2 rounded-full bg-[#4bad40]" />
-											<p className="text-[11px] font-bold text-[#374151] uppercase truncate">
-												Navigating to {selectedBooking.deliveryAddress}
-											</p>
-										</div>
-									</div>
-								</div>
-
-								<div className="mt-4 flex items-center justify-between text-[10px] text-[#b4b4b4] font-bold uppercase tracking-widest">
-									<span>8.4 km total</span>
-									<span>Est. 24 mins</span>
-								</div>
+                                {selectedBooking.lat ? (
+                                    <div className="flex flex-col items-center justify-center p-6 bg-white border border-[#3878c2]/20 rounded-xl shadow-sm text-center">
+                                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-10 text-[#4bad40] mb-3">
+                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                                       </svg>
+                                        <p className="text-sm font-bold text-[#3878c2] mb-1">Customer Location Verified</p>
+                                        <p className="text-xs text-[#b4b4b4] mb-4">Launch Google Maps for turn-by-turn navigation.</p>
+                                        <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 w-full mb-4 text-left">
+                                            <p className="text-[10px] font-bold text-[#b4b4b4] uppercase tracking-wider mb-1">Pinned Home Address</p>
+                                            <p className="text-sm font-semibold text-[#374151]">{selectedBooking.deliveryAddress}</p>
+                                        </div>
+                                        <a
+                                            href={`https://www.google.com/maps/dir/?api=1&destination=${selectedBooking.lat},${selectedBooking.lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#4bad40] px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-[#439b39] transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-5 flex-shrink-0">
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                                            </svg>
+                                            Open in Google Maps
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-6 bg-white border border-[#3878c2]/20 rounded-xl shadow-sm text-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-10 text-[#b4b4b4] mb-3">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        <p className="text-sm font-semibold text-[#3878c2]">GPS Coordinates Not Available</p>
+                                        <p className="text-[10px] uppercase text-[#b4b4b4] tracking-widest mt-1">Manual navigation required</p>
+                                    </div>
+                                )}
 							</div>
 
 							{activeTab === 'available' && (

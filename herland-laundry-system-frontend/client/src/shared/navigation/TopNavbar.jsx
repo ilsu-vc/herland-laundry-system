@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getRoleNavigation } from './navItems';
@@ -15,6 +15,48 @@ export default function TopNavbar({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [session, setSession] = useState(null);
   const navItems = getRoleNavigation(location.pathname);
+  
+  // Draggable Scroll Logic
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [dragMoved, setDragMoved] = useState(false);
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragMoved(false);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
+    if (Math.abs(walk) > 5) {
+      setDragMoved(true);
+    }
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const onNavItemClick = (e, item) => {
+    // Prevent navigation if the user was dragging
+    if (dragMoved) {
+      e.preventDefault();
+      return;
+    }
+    handleNavItemClick(item);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
@@ -83,8 +125,22 @@ export default function TopNavbar({
             </button>
           ) : (
             <div className="flex items-center w-full">
-              {/* Nav Container - Visible and swippable on all screens */}
-              <div className="flex items-center w-full overflow-x-auto scrollbar-hide">
+              {/* Mobile Logo */}
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="btn btn-ghost px-0 lg:hidden shrink-0"
+                aria-label="Go to landing page"
+              >
+                <img
+                  src="/images/SecondaryLogo.png"
+                  alt="Herland Laundry"
+                  className="h-10"
+                />
+              </button>
+
+              {/* Desktop Nav */}
+              <div className="hidden lg:flex items-center w-full">
                 <button
                   type="button"
                   onClick={() => navigate('/')}
@@ -98,13 +154,20 @@ export default function TopNavbar({
                   />
                 </button>
 
-                <div className="flex-1 flex items-center gap-x-1 sm:gap-x-2 md:gap-x-4 px-4 overflow-x-auto scrollbar-hide flex-nowrap min-w-0">
+                <div 
+                  ref={scrollRef}
+                  onMouseDown={handleMouseDown}
+                  onMouseLeave={handleMouseLeave}
+                  onMouseUp={handleMouseUp}
+                  onMouseMove={handleMouseMove}
+                  className={`flex-1 flex items-center justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 px-4 overflow-x-auto scrollbar-hide flex-nowrap ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none active:cursor-grabbing`}
+                >
                   {navItems.filter(item => (!item.requiresAuth || session) && (!item.requiresGuest || !session)).map((item) => (
                     <button
                       key={`${item.label}-${item.path}`}
                       type="button"
-                      onClick={() => handleNavItemClick(item)}
-                      className="btn btn-ghost text-[#3878c2] px-3 sm:px-4 text-[14px] sm:text-[15px] font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 shrink-0"
+                      onClick={(e) => onNavItemClick(e, item)}
+                      className="btn btn-ghost text-[#3878c2] px-4 text-[15px] font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 shrink-0"
                     >
                       {item.label}
                     </button>
