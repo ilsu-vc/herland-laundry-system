@@ -40,12 +40,27 @@ const ACTION_EFFECTS = {
   "Accept Booking": { status: "Booking Accepted", nextStage: "payment" },
   "Edit Booking": { status: "Booking Edited", nextStage: "payment" },
   "Cancel Booking": { status: "Booking Cancelled", nextStage: "done" },
+  "Dispatch for Pickup": { status: "Ready for Pickup from Customer", nextStage: "payment" },
   "Confirm Payment": { status: "Payment Confirmed", nextStage: "preparation" },
   "Flag Payment": { status: "Payment Flagged", nextStage: "done" },
   "Start Laundry": { status: "In Progress", nextStage: "shipping" },
   "Mark Ready for Pickup": { status: "Ready for Pick-up", nextStage: "final" },
   "Dispatch Booking": { status: "Out for Delivery", nextStage: "final" },
   "Complete Booking": { status: "Booking Completed", nextStage: "done" },
+};
+
+const STAGE_BY_STATUS = {
+  "Booking Received": "received",
+  "Booking Accepted": "payment",
+  "Booking Edited": "payment",
+  "Ready for Pickup from Customer": "payment",
+  "Payment Confirmed": "preparation",
+  "Payment Flagged": "done",
+  "In Progress": "shipping",
+  "Ready for Pick-up": "final",
+  "Out for Delivery": "final",
+  "Booking Completed": "done",
+  "Booking Cancelled": "done",
 };
 
 const RED_BUTTONS = ["Cancel Booking", "Flag Payment"];
@@ -60,6 +75,7 @@ const initialBookings = [
     collectionOption: "dropOffPickUpLater",
     stage: "received",
     timeline: [{ status: "Booking Received", timestamp: now }],
+    createdAt: now,
   },
   {
     id: "REF-20260215-002",
@@ -73,6 +89,7 @@ const initialBookings = [
       { status: "Payment Confirmed", timestamp: now },
       { status: "In Progress", timestamp: now },
     ],
+    createdAt: now,
   },
 ];
 
@@ -87,7 +104,19 @@ const getShippingButtons = (booking) => {
 
 const getButtonsForBooking = (booking) => {
   if (booking.stage === "shipping") return getShippingButtons(booking);
-  return STAGE_ACTIONS[booking.stage] || [];
+  
+  const buttons = [...(STAGE_ACTIONS[booking.stage] || [])];
+  
+  // Inject "Dispatch for Pickup" if it's an early stage, pickup is required, and hasn't been dispatched
+  const earlyStages = ["received", "payment", "preparation"];
+  if (earlyStages.includes(booking.stage) && booking.collectionOption === "pickedUpDelivered") {
+    const hasDispatched = booking.timeline.some(t => t.status === "Ready for Pickup from Customer");
+    if (!hasDispatched) {
+      buttons.unshift("Dispatch for Pickup");
+    }
+  }
+
+  return buttons;
 };
 
 const toTitleCase = (value = "") =>
@@ -195,12 +224,22 @@ const canConfirmPaymentForBooking = (booking) => {
   return hasReferenceNumber(payment.referenceNumber);
 };
 
+function getMonthYear(dateString) {
+  if (!dateString || dateString === "-") return null;
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 export default function ManageBookings() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState(() => [...initialBookings]);
   const [expandedId, setExpandedId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all"); // New state
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [selectedMonth, setSelectedMonth] = useState("All Time");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+  const [sortDirection, setSortDirection] = useState("desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [amountDrafts, setAmountDrafts] = useState({});
   const [amountError, setAmountError] = useState("");
@@ -211,7 +250,7 @@ export default function ManageBookings() {
 
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "").trim(),
     libraries: mapLibraries,
   });
 
@@ -341,6 +380,66 @@ export default function ManageBookings() {
     }
   };
 
+  const undoStatus = async (bookingId) => {
+    const currentBooking = bookings.find((booking) => booking.id === bookingId);
+    if (!currentBooking || !currentBooking.timeline || currentBooking.timeline.length <= 1) return;
+
+    if (!window.confirm("Are you sure you want to revert this booking to its previous status?")) return;
+
+    const updatedTimeline = currentBooking.timeline.slice(0, -1);
+    const previousStatusObj = updatedTimeline[updatedTimeline.length - 1];
+    const previousStatus = previousStatusObj.status;
+    const previousStage = STAGE_BY_STATUS[previousStatus] || "received";
+
+    // Update local state immediately for responsive UI
+    setBookings((prev) =>
+      prev.map((booking) => {
+        if (booking.id !== bookingId) return booking;
+
+        const nextPaymentDetails = booking.paymentDetails
+          ? {
+              ...booking.paymentDetails,
+              status:
+                previousStatus === "Payment Confirmed"
+                  ? "Payment Confirmed"
+                  : previousStatus === "Payment Flagged"
+                  ? "Payment Flagged"
+                  : booking.paymentDetails.status,
+            }
+          : booking.paymentDetails;
+
+        return {
+          ...booking,
+          timeline: updatedTimeline,
+          stage: previousStage,
+          paymentDetails: nextPaymentDetails,
+        };
+      })
+    );
+
+    // Persist to database via backend using the normal status endpoint
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const dbId = currentBooking?.dbId || bookingId;
+
+      await fetch(`${API_BASE}/bookings/${dbId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          status: previousStatus,
+          nextStage: previousStage,
+          timeline: updatedTimeline,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to persist undo status update:', error);
+    }
+  };
+
   const saveAmountToPay = async (bookingId) => {
     const targetBooking = bookings.find((booking) => booking.id === bookingId);
     const paymentStatus = targetBooking?.paymentDetails?.status;
@@ -411,14 +510,28 @@ export default function ManageBookings() {
     }
   };
 
-  // Filter bookings based on selected status
+  // Extract unique months
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    bookings.forEach(b => {
+      const my = getMonthYear(b.date);
+      if (my) months.add(my);
+    });
+    return ["All Time", ...Array.from(months).sort((a, b) => new Date(b) - new Date(a))];
+  }, [bookings]);
+
+  // Filter bookings based on selected status and month
   const filteredBookings = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    const statusFiltered =
-      filterStatus === "all"
-        ? bookings
-        : bookings.filter((booking) => getStatusKey(getCurrentStatus(booking)) === filterStatus);
+    const statusFiltered = bookings.filter((booking) => {
+      if (filterStatus !== "all" && getStatusKey(getCurrentStatus(booking)) !== filterStatus) return false;
+      if (selectedMonth !== "All Time") {
+        const my = getMonthYear(booking.date);
+        if (my !== selectedMonth) return false;
+      }
+      return true;
+    });
 
     const searchFiltered =
       normalizedQuery.length === 0
@@ -429,15 +542,26 @@ export default function ManageBookings() {
             return bookingId.includes(normalizedQuery) || customerName.includes(normalizedQuery);
           });
 
-    const sorted = [...searchFiltered].sort((firstBooking, secondBooking) =>
-      firstBooking.id.localeCompare(secondBooking.id, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      })
-    );
+    const sorted = [...searchFiltered].sort((firstBooking, secondBooking) => {
+      const timeA = new Date(firstBooking.createdAt || 0).getTime();
+      const timeB = new Date(secondBooking.createdAt || 0).getTime();
+      // By default sort ascending dates (oldest first)
+      return timeA - timeB;
+    });
 
     return sortDirection === "asc" ? sorted : sorted.reverse();
-  }, [filterStatus, bookings, sortDirection, searchQuery]);
+  }, [filterStatus, selectedMonth, bookings, sortDirection, searchQuery]);
+
+  // Reset to page 1 if filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, selectedMonth, sortDirection, searchQuery]);
+
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="min-h-screen bg-white px-4 py-6 sm:py-10">
@@ -458,7 +582,7 @@ export default function ManageBookings() {
           </div>
         </header>
 
-        <div className="mb-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-[minmax(220px,1fr)_160px_minmax(240px,auto)] md:items-center md:gap-3">
+        <div className="mb-6 grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_130px_160px_minmax(220px,auto)] md:items-center md:gap-3">
             <label htmlFor="booking-search" className="sr-only">
               Search by reference number or customer name
             </label>
@@ -470,6 +594,16 @@ export default function ManageBookings() {
               placeholder="Search reference # or customer"
               className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-[#374151] placeholder:text-gray-400 md:min-w-0"
             />
+
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white text-[#374151] cursor-pointer outline-none"
+            >
+              {availableMonths.map(month => (
+                <option key={month} value={month}>{month}</option>
+              ))}
+            </select>
 
             <FilterSelect
               id="booking-status-filter"
@@ -485,7 +619,7 @@ export default function ManageBookings() {
               className="h-10 w-full border border-gray-300 rounded-md px-3 text-sm bg-white"
             />
 
-            <div className="flex h-10 min-w-[240px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 md:col-span-1">
+            <div className="flex h-10 min-w-[220px] items-center justify-between gap-2 rounded-md border border-[#b4b4b4] px-3 sm:col-span-2 lg:col-span-1">
               <p className="whitespace-nowrap text-xs font-semibold text-[#3878c2]">Sort by</p>
               <div className="flex items-center gap-1.5">
                 <RadioRow
@@ -513,7 +647,7 @@ export default function ManageBookings() {
             <p className="text-gray-500 col-span-full">No bookings found for this status.</p>
           )}
 
-          {filteredBookings.map((booking) => {
+          {paginatedBookings.map((booking) => {
             const activeColor = getStatusMeta(getCurrentStatus(booking)).color;
             const buttons = getButtonsForBooking(booking);
 
@@ -543,6 +677,29 @@ export default function ManageBookings() {
             );
           })}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-8 mb-4 flex items-center justify-center gap-4">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-[#3878c2] px-4 py-2 text-sm font-semibold text-[#3878c2] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3878c2]/5 transition"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-[#374151]">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg bg-[#3878c2] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2d62a3] shadow-sm transition"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {selectedBooking && (() => {
@@ -580,10 +737,24 @@ export default function ManageBookings() {
                 <h1 className="text-2xl font-semibold">Booking Details</h1>
               </header>
 
-              <div className="mb-4">
-                <h2 className="text-base font-semibold text-[#3878c2] break-words">{selectedBooking.customerName}</h2>
-                <p className="text-xs text-[#374151] mt-0.5">{selectedBooking.id}</p>
-                <p className="text-xs text-[#374151] mt-0.5">Booking received on {selectedBooking.date}</p>
+              <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-base font-semibold text-[#3878c2] break-words">{selectedBooking.customerName}</h2>
+                  <p className="text-xs text-[#374151] mt-0.5">{selectedBooking.id}</p>
+                  <p className="text-xs text-[#374151] mt-0.5">Booking received on {selectedBooking.date}</p>
+                </div>
+                {selectedBooking.timeline && selectedBooking.timeline.length > 1 && (
+                  <button
+                    onClick={() => undoStatus(selectedBooking.id)}
+                    className="flex items-center gap-1.5 rounded-lg border border-[#e55353] px-3 py-1.5 text-xs font-semibold text-[#e55353] hover:bg-[#e55353] hover:text-white transition shadow-sm"
+                    title="Revert to the previous status"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                    </svg>
+                    Undo Status
+                  </button>
+                )}
               </div>
 
               {buttons.length > 0 && (
@@ -635,6 +806,12 @@ export default function ManageBookings() {
                       <p className="text-xs font-semibold text-[#3878c2]">Collection Mode</p>
                       <p className="mt-1 text-sm text-[#374151]">{collectionDetails.mode}</p>
                     </div>
+                    {collectionDetails.customerAddress && (
+                      <div className="md:col-span-2 rounded-lg bg-gray-50 border border-gray-100 p-3 mt-1">
+                        <p className="text-xs font-semibold text-[#b4b4b4] uppercase">Home / Pinned Address</p>
+                        <p className="mt-1 text-sm text-[#374151] font-medium">{collectionDetails.customerAddress}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs font-semibold text-[#3878c2]">Collection Schedule</p>
                       <p className="mt-1 text-sm text-[#374151]">

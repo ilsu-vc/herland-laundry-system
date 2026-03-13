@@ -104,7 +104,7 @@ export default function RiderDashboard() {
 				pickupAddress: collectionDetails.pickupAddress || fallbackRoute.pickupAddress,
 				pickupDate: collectionDetails.collectionDate || '',
 				pickupTime: collectionDetails.collectionTime || '',
-				deliveryAddress: booking.customerAddress || collectionDetails.deliveryAddress || fallbackRoute.deliveryAddress,
+				deliveryAddress: collectionDetails.customerAddress || collectionDetails.deliveryAddress || fallbackRoute.deliveryAddress,
 				deliveryDate: collectionDetails.deliveryDate || '',
 				deliveryTime: collectionDetails.deliveryTime || '',
 				lat: collectionDetails.lat || null,
@@ -288,6 +288,10 @@ export default function RiderDashboard() {
                                        </svg>
                                         <p className="text-sm font-bold text-[#3878c2] mb-1">Customer Location Verified</p>
                                         <p className="text-xs text-[#b4b4b4] mb-4">Launch Google Maps for turn-by-turn navigation.</p>
+                                        <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 w-full mb-4 text-left">
+                                            <p className="text-[10px] font-bold text-[#b4b4b4] uppercase tracking-wider mb-1">Pinned Home Address</p>
+                                            <p className="text-sm font-semibold text-[#374151]">{selectedBooking.deliveryAddress}</p>
+                                        </div>
                                         <a
                                             href={`https://www.google.com/maps/dir/?api=1&destination=${selectedBooking.lat},${selectedBooking.lng}`}
                                             target="_blank"

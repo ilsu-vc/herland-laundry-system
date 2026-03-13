@@ -33,6 +33,7 @@ router.get('/services', async (req, res) => {
                 id: i.id,
                 name: i.name,
                 currentPrice: Number(i.current_price),
+                estimatedHours: i.estimated_hours != null ? Number(i.estimated_hours) : 0,
             }));
 
         const addOns = (items || [])
@@ -41,6 +42,7 @@ router.get('/services', async (req, res) => {
                 id: i.id,
                 name: i.name,
                 currentPrice: Number(i.current_price),
+                estimatedHours: i.estimated_hours != null ? Number(i.estimated_hours) : 0,
             }));
 
         res.json({ services, addOns, schedule: scheduleRows?.[0] || null });
@@ -330,7 +332,9 @@ router.get('/profile', requireAuth, async (req, res) => {
             profile_phone: profile?.phone_number || '', // Profile table phone
             role: profile?.role || 'Customer',
             avatar_url: profile?.avatar_url || null,
-            address: profile?.address || ''
+            address: profile?.address || '',
+            lat: profile?.lat || null,
+            lng: profile?.lng || null
         });
     } catch (error) {
         console.error('Fetch Profile Error:', error.message);
@@ -339,7 +343,7 @@ router.get('/profile', requireAuth, async (req, res) => {
 });
 
 router.put('/profile', requireAuth, async (req, res) => {
-    const { name, phone, password, address } = req.body;
+    const { name, phone, password, address, lat, lng } = req.body;
 
     try {
         // 1. Update Profile table
@@ -348,6 +352,8 @@ router.put('/profile', requireAuth, async (req, res) => {
         if (phone !== undefined) profileUpdate.phone_number = phone;
         if (req.body.avatar_url !== undefined) profileUpdate.avatar_url = req.body.avatar_url;
         if (address !== undefined) profileUpdate.address = address;
+        if (lat !== undefined) profileUpdate.lat = lat;
+        if (lng !== undefined) profileUpdate.lng = lng;
 
         if (Object.keys(profileUpdate).length > 0) {
             const { error: profileError } = await supabase

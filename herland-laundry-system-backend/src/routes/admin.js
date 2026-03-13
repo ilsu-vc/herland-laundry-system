@@ -187,6 +187,7 @@ router.get('/bookings', verifyRole(['Admin', 'Staff']), async (req, res) => {
             customerName: profilesMap[b.user_id] || 'Unknown Customer',
             userId: b.user_id,
             date: b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
+            createdAt: b.created_at || new Date().toISOString(),
             collectionOption: b.collection_option || 'dropOffPickUpLater',
             stage: b.stage || 'received',
             timeline: b.timeline || [{ status: 'Booking Received', timestamp: b.created_at || new Date().toISOString() }],
@@ -336,6 +337,7 @@ router.get('/services', verifyRole('Admin'), async (req, res) => {
                 name: i.name,
                 currentPrice: Number(i.current_price),
                 previousPrice: i.previous_price != null ? Number(i.previous_price) : null,
+                estimatedHours: i.estimated_hours != null ? Number(i.estimated_hours) : 0,
             }));
 
         const addOns = (items || [])
@@ -345,6 +347,7 @@ router.get('/services', verifyRole('Admin'), async (req, res) => {
                 name: i.name,
                 currentPrice: Number(i.current_price),
                 previousPrice: i.previous_price != null ? Number(i.previous_price) : null,
+                estimatedHours: i.estimated_hours != null ? Number(i.estimated_hours) : 0,
             }));
 
         const schedule = scheduleRows && scheduleRows.length > 0
@@ -365,7 +368,7 @@ router.get('/services', verifyRole('Admin'), async (req, res) => {
 
 // Route: Add a new service or add-on
 router.post('/services/items', verifyRole('Admin'), async (req, res) => {
-    const { type, name, currentPrice } = req.body;
+    const { type, name, currentPrice, estimatedHours } = req.body;
 
     if (!type || !name || currentPrice === undefined) {
         return res.status(400).json({ error: 'type, name, and currentPrice are required' });
@@ -392,6 +395,7 @@ router.post('/services/items', verifyRole('Admin'), async (req, res) => {
                 name: name.trim(),
                 current_price: Number(currentPrice),
                 previous_price: null,
+                estimated_hours: estimatedHours ? Number(estimatedHours) : 0,
                 sort_order: nextOrder,
             })
             .select()
@@ -404,6 +408,7 @@ router.post('/services/items', verifyRole('Admin'), async (req, res) => {
             name: data.name,
             currentPrice: Number(data.current_price),
             previousPrice: null,
+            estimatedHours: Number(data.estimated_hours),
         });
     } catch (error) {
         console.error('Add Service Item Error:', error.message);
@@ -414,7 +419,7 @@ router.post('/services/items', verifyRole('Admin'), async (req, res) => {
 // Route: Update a service or add-on price
 router.put('/services/items/:id', verifyRole('Admin'), async (req, res) => {
     const { id } = req.params;
-    const { currentPrice, previousPrice } = req.body;
+    const { currentPrice, previousPrice, estimatedHours } = req.body;
 
     if (currentPrice === undefined) {
         return res.status(400).json({ error: 'currentPrice is required' });
@@ -426,6 +431,9 @@ router.put('/services/items/:id', verifyRole('Admin'), async (req, res) => {
         };
         if (previousPrice !== undefined) {
             updateData.previous_price = previousPrice !== null ? Number(previousPrice) : null;
+        }
+        if (estimatedHours !== undefined) {
+            updateData.estimated_hours = Number(estimatedHours);
         }
 
         const { error } = await supabase

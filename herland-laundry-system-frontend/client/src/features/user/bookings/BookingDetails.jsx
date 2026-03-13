@@ -391,6 +391,12 @@ export default function BookingDetails() {
                   <span className="font-semibold">Mode:</span>{" "}
                   {booking?.collectionDetails?.optionLabel || "-"}
                 </div>
+                {booking?.collectionDetails?.customerAddress && (
+                  <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 text-sm text-[#374151]">
+                    <span className="font-semibold text-[#b4b4b4] uppercase text-xs">Home / Pinned Address:</span>
+                    <p className="mt-1 font-medium">{booking.collectionDetails.customerAddress}</p>
+                  </div>
+                )}
               </div>
             </div>
 

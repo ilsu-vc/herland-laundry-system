@@ -1,6 +1,7 @@
 export const STATUS_META = {
   BookingReceived: { label: "Booking Received", color: "#b4b4b4" },
   BookingAccepted: { label: "Booking Accepted", color: "#ffde59" },
+  ReadyForPickupFromCustomer: { label: "Ready for Pickup from Customer", color: "#63bce6" },
   BookingEdited: { label: "Booking Edited", color: "#ffde59" },
   PaymentConfirmed: { label: "Payment Confirmed", color: "#ffde59" },
   InProgress: { label: "In Progress", color: "#ffde59" },
@@ -15,6 +16,7 @@ export const STATUS_META = {
 export const STATUS_ORDER = [
   "BookingReceived",
   "BookingAccepted",
+  "ReadyForPickupFromCustomer",
   "BookingEdited",
   "PaymentConfirmed",
   "InProgress",
@@ -29,6 +31,7 @@ export const STATUS_ORDER = [
 export const ACTIVE_STATUSES = [
   "BookingReceived",
   "BookingAccepted",
+  "ReadyForPickupFromCustomer",
   "BookingEdited",
   "PaymentConfirmed",
   "InProgress",
@@ -53,6 +56,8 @@ export const getStatusKey = (status = "") => {
     return "BookingReceived";
   if (lower === "accepted" || lower.includes("accepted"))
     return "BookingAccepted";
+  if (lower === "ready for pickup from customer" || lower.includes("pickup from customer"))
+    return "ReadyForPickupFromCustomer";
   if (lower === "edited" || lower.includes("edited")) return "BookingEdited";
   if (lower === "confirmed" || lower.includes("payment confirmed"))
     return "PaymentConfirmed";

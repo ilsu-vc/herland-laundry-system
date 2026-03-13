@@ -255,6 +255,11 @@ export default function Profile() {
             <div className="flex flex-col gap-0.5">
               <p className="text-lg font-bold text-[#3878c2]">{formData.firstName} {formData.lastName}</p>
               <p className="text-xs text-gray-500 font-medium">{formData.email}</p>
+              {formData.address && (
+                <p className="text-xs text-[#3878c2] mt-1 font-semibold break-words max-w-sm mx-auto text-center">
+                  📍 {formData.address}
+                </p>
+              )}
             </div>
           </div>
 
