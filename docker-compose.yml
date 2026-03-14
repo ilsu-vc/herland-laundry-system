@@ -11,6 +11,8 @@ services:
     volumes:
       - ./herland-laundry-system-backend:/app
       - /app/node_modules
+    env_file:
+      - ./herland-laundry-system-backend/.env
     environment:
       - NODE_ENV=development
     restart: unless-stopped
@@ -25,6 +27,8 @@ services:
     volumes:
       - ./herland-laundry-system-frontend/client:/app
       - /app/node_modules
+    env_file:
+      - ./herland-laundry-system-frontend/client/.env
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_URL=http://localhost:5000/api/v1
