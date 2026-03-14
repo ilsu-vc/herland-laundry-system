@@ -1,125 +1,55 @@
-# Herland Laundry System
+Getting Started with the Project (Docker Setup)
+Hey team! To get the project running locally, you no longer need to install Node.js, npm, or worry about package versions. We are now using Docker. 🐳
 
-A modern, full-stack laundry management web application designed for seamless customer scheduling, rider task management, and administrative oversight.
+Here are the steps to get your local environment running:
 
-## 🚀 Features
+1. Prerequisites
 
-### 👤 Customer Experience
-- **Public Service Preview**: Dynamic landing page showcasing real-time service rates and add-ons. **(Now set as the primary index `/`)**
-- **Smart Booking Flow**: Easy multi-step booking process with service selection, weight calculation, and automatic address fetching.
-- **Custom Booking Calendar**: A professional theme-consistent calendar UI for selecting collection and delivery dates and times.
-- **Capacity Management**: Real-time tracking of booking slots with a built-in capacity limit (max 8 customers per hour) and visual "X SLOTS LEFT" indicators.
-- **Order Tracking**: Real-time vertical timeline tracking from "Booking Received" to "Delivered".
-- **Digital Receipts**: Instant generation of professional receipts for every order.
-- **Flexible Payments**: Integrated downpayment processing and GCash support.
-- **Feedback & Reviews**: Star rating and comment system for completed orders.
+Ensure you have Docker Desktop installed and running on your machine.
+Ensure you have git installed.
+2. Pull the Latest Code Pull the latest code from the repository (specifically from the Lance-Branch where the Docker configuration was added):
 
-### 🛵 Rider Management
-- **Task Claiming**: Transparent "Accept/Decline" system for available delivery assignments.
-- **Delivery Workflow**: One-tap status updates (Picked up, Out for delivery, Delivered).
-- **Earnings/History**: View assigned tasks and completed deliveries.
+bash
+git checkout Lance-Branch
+git pull origin Lance-Branch
+3. Set Up Environment Variables You will see two new files in the codebase called 
 
-### 👔 Staff Controls
-- **Processing Management**: Update wash, dry, and fold progress for active orders.
-- **Inventory Awareness**: Access to current service configurations.
+.env.example
+. You need to create your own actual 
 
-### 👑 Admin Dashboard
-- **Service Management**: Full CRUD capabilities to manage pricing, services, and add-ons.
-- **Analytics & Reports**: Visual data on total revenue, booking volumes, and customer trends.
-- **User Management**: Role-based access control for Admins, Staff, Riders, and Customers.
+.env
+ files based on these templates.
 
----
+Backend: In the herland-laundry-system-backend/ folder, create a file named 
 
-## 🛠️ Technology Stack
-- **Frontend**: React.js, Tailwind CSS, Vite
-- **Backend**: Node.js, Express.js
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
+.env
+ and paste in the backend secrets (Supabase keys, Port, etc.) that Lance provides.
+Frontend: In the herland-laundry-system-frontend/client/ folder, create a file named 
 
----
+.env
+ and paste in the frontend secrets (Google Maps API key, etc.) that Lance provides.
+(Note: Do not commit your 
 
-## ⚙️ Setup Instructions
+.env
+ files. They are already in the 
 
-### 1. Prerequisites
-- Node.js (v18+)
-- Supabase Account
+.gitignore
+.)
 
-### 2. Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd herland-laundry-system-backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file based on the example and add your Supabase credentials:
-   ```env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_anon_key
-   PORT=5000
-   ```
-4. Start the server:
-   ```bash
-   npm start
-   ```
+4. Start the Application Open a terminal in the root folder of the project (where the 
 
-### 3. Frontend Setup
-1. Navigate to the frontend directory:
-   ```bash
-   cd herland-laundry-system-frontend/client
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+docker-compose.yml
+ file is located) and run this command:
 
-### 4. Database Migration
-To ensure all features (Rider Assignment, Feedback, etc.) work correctly, you must update your Supabase schema:
-1. Open your **Supabase Dashboard**.
-2. Go to the **SQL Editor**.
-3. Copy the contents of [`database_migration.sql`](file:///c:/Users/Lance/Documents/GitHub/herland-laundry-system/database_migration.sql).
-4. Paste and **Run** the script.
+bash
+docker compose up -d --build
+5. Access the App It will take a minute or two to download the images and install dependencies the first time. Once it says the containers have started:
 
----
+The Frontend will be running at: http://localhost:5173/
+The Backend will be running at: http://localhost:5000/
+Note on Hot-Reloading: We have set up volume mounts, meaning if you make changes in your IDE (like VS Code), the changes will instantly reflect in the running containers! You do not need to restart Docker every time you edit a file.
 
-## 📖 How to Use
+(Don't forget to securely send them the actual keys that belong in those 
 
-### For Customers
-1. Visit the **Landing Page** to view current rates.
-2. **Sign Up** or **Log In** to access the dashboard.
-3. Click **Book Now** to start a new laundry request.
-4. Track your order through the **Booking History** page.
-5. Once delivered, leave a **Review** to share your experience.
-
-### For Riders
-1. Log in with a Rider account.
-2. Navigate to **Available Tasks** to claim new assignments.
-3. Update progress in **My Assignments** as you fulfill the delivery.
-
-### Booking Capacity Management
-The system now supports shared time slots with a specific customer limit:
-- **Default Limit**: Each 1-hour time slot can accommodate up to **8 customers**.
-- **Real-time Availability**: The backend `/booked-slots` endpoint tracks counts for each slot.
-- **Visual Feedback**:
-    - **Healthy (0-4 bookings)**: Slot appears normal.
-    - **Limited (5-7 bookings)**: Shows "X SLOTS LEFT" in orange.
-    - **Full (8 bookings)**: Marked as "FULLY BOOKED" in red and disabled.
-
-### For Admins
-1. Log in with an Admin account.
-2. Use the **Manage Services** tab to update pricing and draft new services.
-3. Check the **Reports** page for business health metrics.
-4. All input fields across the dashboard now feature a white background for better visibility.
-
----
-
-## 🤝 Contributing
-Contributions are welcome! Please follow the standard fork-and-pull-request workflow.
-
-## 📄 License
-This project is licensed under the MIT License.
+.env
+ files via Discord, Slack, etc.!)
