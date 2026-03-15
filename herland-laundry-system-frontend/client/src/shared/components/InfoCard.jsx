@@ -84,6 +84,21 @@ export default function InfoCard({
                     className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
                     placeholder="Email"
                   />
+                  <input
+                    name="address"
+                    value={editData?.address || ''}
+                    onChange={onInputChange}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
+                    placeholder="Address"
+                  />
+                  <input
+                    name="password"
+                    type="text"
+                    value={editData?.password || ''}
+                    onChange={onInputChange}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
+                    placeholder="New Password (e.g. Password123#)"
+                  />
 
                   <div className="flex gap-2 mt-2">
                     <button
@@ -103,10 +118,22 @@ export default function InfoCard({
               ) : (
                 <div className="flex flex-col gap-1 text-sm">
                   <p>
-                    <span className="font-semibold text-[#3878c2]">Phone:</span> {item?.phone}
+                    <span className="font-semibold text-[#3878c2]">Phone:</span> {item?.phone || 'N/A'}
                   </p>
                   <p>
-                    <span className="font-semibold text-[#3878c2]">Email:</span> {item?.email}
+                    <span className="font-semibold text-[#3878c2]">Email:</span> {item?.email || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-[#3878c2]">Address:</span> {item?.address || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-[#3878c2]">Password:</span> {isPasswordVisible ? '[Hidden by security, use Edit to reset]' : '********'}
+                    <button
+                      onClick={() => onTogglePassword(id)}
+                      className="text-[#3878c2] ml-2 text-xs hover:text-blue-700"
+                    >
+                      {isPasswordVisible ? 'Hide' : 'Show'}
+                    </button>
                   </p>
 
                   <div className="flex gap-2 mt-2">
@@ -177,11 +204,19 @@ export default function InfoCard({
                     placeholder="Phone"
                   />
                   <input
+                    name="email"
+                    value={editData?.email || ''}
+                    onChange={onInputChange}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
+                    placeholder="Email"
+                  />
+                  <input
                     name="password"
+                    type="text"
                     value={editData?.password || ''}
                     onChange={onInputChange}
                     className="border border-gray-300 rounded px-2 py-1 text-sm outline-none focus:border-[#3878c2] bg-white"
-                    placeholder="Password"
+                    placeholder="New Password (e.g. Password123#)"
                   />
                   <div className="flex gap-2 mt-2">
                     <button
@@ -204,13 +239,16 @@ export default function InfoCard({
                     <span className="font-semibold text-[#3878c2]">Role:</span> <span className="capitalize">{item?.role || 'Customer'}</span>
                   </p>
                   <p>
-                    <span className="font-semibold text-[#3878c2]">Phone:</span> {item?.phone}
+                    <span className="font-semibold text-[#3878c2]">Phone:</span> {item?.phone || 'N/A'}
                   </p>
                   <p>
-                    <span className="font-semibold text-[#3878c2]">Address:</span> {item?.address}
+                    <span className="font-semibold text-[#3878c2]">Email:</span> {item?.email || 'N/A'}
                   </p>
                   <p>
-                    <span className="font-semibold text-[#3878c2]">Password:</span> {isPasswordVisible ? item?.password : '********'}
+                    <span className="font-semibold text-[#3878c2]">Address:</span> {item?.address || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-[#3878c2]">Password:</span> {isPasswordVisible ? '[Hidden by security, use Edit to reset]' : '********'}
                     <button
                       onClick={() => onTogglePassword(id)}
                       className="text-[#3878c2] ml-2 text-xs hover:text-blue-700"

@@ -9,7 +9,7 @@ export default function Providers({ children }) {
 	const [hideBottomNav, setHideBottomNav] = useState(false)
 
 	return (
-		<BrowserRouter>
+		<BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 			<ToastProvider>
 				<ConfirmationProvider>
 					<PermissionsProvider>

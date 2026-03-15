@@ -137,6 +137,9 @@ export default function ManageUsers() {
                 role: editData.role,
                 phone: editData.phone,
                 name: editData.name,
+                email: editData.email,
+                address: editData.address,
+                password: editData.password,
             })
         });
 

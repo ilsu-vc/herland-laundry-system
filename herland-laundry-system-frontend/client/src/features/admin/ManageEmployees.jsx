@@ -25,6 +25,7 @@ import { useConfirm } from '../../shared/components/ConfirmationModal';
   const [expandedId, setExpandedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [showPasswords, setShowPasswords] = useState({});
   const [filterRole, setFilterRole] = useState('all');
   const [sortDirection, setSortDirection] = useState('asc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,6 +133,8 @@ import { useConfirm } from '../../shared/components/ConfirmationModal';
                 phone: editData.phone,
                 email: editData.email,
                 name: editData.name,
+                address: editData.address,
+                password: editData.password,
             })
         });
 
@@ -156,6 +159,10 @@ import { useConfirm } from '../../shared/components/ConfirmationModal';
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const togglePasswordVisibility = (id) => {
+    setShowPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleDelete = async (id) => {
@@ -271,6 +278,8 @@ import { useConfirm } from '../../shared/components/ConfirmationModal';
               onSaveEdit={saveEdit}
               onInputChange={handleInputChange}
               onDelete={handleDelete}
+              onTogglePassword={togglePasswordVisibility}
+              isPasswordVisible={Boolean(showPasswords[member.id])}
               panelVariant="blue"
             />
           ))}

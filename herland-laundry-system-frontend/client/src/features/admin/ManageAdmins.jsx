@@ -14,6 +14,7 @@ export default function ManageAdmins() {
   const [expandedId, setExpandedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [showPasswords, setShowPasswords] = useState({});
   const [sortDirection, setSortDirection] = useState('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('admins'); // 'admins' or 'promote'
@@ -108,6 +109,9 @@ export default function ManageAdmins() {
                 role: editData.role,
                 name: editData.name,
                 phone: editData.phone,
+                email: editData.email,
+                address: editData.address,
+                password: editData.password,
             })
         });
 
@@ -130,6 +134,10 @@ export default function ManageAdmins() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const togglePasswordVisibility = (id) => {
+    setShowPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
@@ -237,6 +245,8 @@ export default function ManageAdmins() {
               onCancelEditing={cancelEditing}
               onSaveEdit={saveEdit}
               onInputChange={handleInputChange}
+              onTogglePassword={togglePasswordVisibility}
+              isPasswordVisible={Boolean(showPasswords[member.id])}
               panelVariant="blue"
             />
           ))}

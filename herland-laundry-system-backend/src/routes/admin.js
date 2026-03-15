@@ -58,6 +58,7 @@ router.get('/users', verifyRole('Admin'), async (req, res) => {
                 phone: authUser.phone || profile.phone_number || null,
                 full_name: profile.full_name || null,
                 role: profile.role || 'Customer',
+                address: profile.address || null,
                 updated_at: profile.updated_at || authUser.created_at,
                 created_at: authUser.created_at,
             };
@@ -73,7 +74,7 @@ router.get('/users', verifyRole('Admin'), async (req, res) => {
 // Route: Update user details (role, phone, email, name)
 router.put('/users/:id/role', verifyRole('Admin'), async (req, res) => {
     const { id } = req.params;
-    const { role, phone, email, name } = req.body;
+    const { role, phone, email, name, address, password } = req.body;
 
     if (role && !['Customer', 'Staff', 'Rider', 'Admin'].includes(role)) {
         return res.status(400).json({ error: 'Invalid role' });
@@ -85,6 +86,7 @@ router.put('/users/:id/role', verifyRole('Admin'), async (req, res) => {
         if (role) profileUpdate.role = role;
         if (phone !== undefined) profileUpdate.phone_number = phone;
         if (name !== undefined) profileUpdate.full_name = name;
+        if (address !== undefined) profileUpdate.address = address;
 
         if (Object.keys(profileUpdate).length > 0) {
             const { error } = await supabase
@@ -96,7 +98,7 @@ router.put('/users/:id/role', verifyRole('Admin'), async (req, res) => {
         }
 
         // Update auth user phone/email if provided
-        if (phone !== undefined || email !== undefined) {
+        if (phone !== undefined || email !== undefined || password !== undefined) {
             const authUpdate = {};
 
             // Convert phone to E.164 format for Supabase auth
@@ -113,6 +115,7 @@ router.put('/users/:id/role', verifyRole('Admin'), async (req, res) => {
             }
 
             if (email !== undefined) authUpdate.email = email;
+            if (password !== undefined && password.trim() !== '') authUpdate.password = password;
 
             if (Object.keys(authUpdate).length > 0) {
                 const { error: authError } = await supabase.auth.admin.updateUserById(id, authUpdate);
