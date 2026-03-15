@@ -92,30 +92,67 @@ app.post('/api/v1/auth/login', async (req, res) => {
 app.post('/api/v1/bookings', requireAuth, async (req, res) => {
     const { userId, serviceType, schedule } = req.body;
 
-    // ─── Double Booking Prevention ──────────────────────────────────────────────
+    // ─── Operational Hours Enforcement & 4-Hour Rule ─────────
+    const { getHours, addDays, setHours, setMinutes, setSeconds } = require('date-fns');
+
+    // Parse the requested date and hour from schedule
+    const reqDate = new Date(schedule);
+    const reqHour = getHours(reqDate);
+
+    // Reject if outside operational hours (08:00 to 18:00)
+    if (reqHour < 8 || reqHour >= 18) {
+        return res.status(400).json({ error: 'Requested schedule is outside operational hours (08:00 to 18:00)' });
+    }
+
+    // Default expected completion is +4 hours
+    let expectedCompletion = new Date(reqDate);
+    expectedCompletion = setHours(expectedCompletion, reqHour + 4);
+
+    // If difference < 4 hours from closing time (18:00)
+    if (18 - reqHour < 4) {
+        // Adjust expected completion to next day at 08:00
+        expectedCompletion = addDays(new Date(reqDate), 1);
+        expectedCompletion = setHours(expectedCompletion, 8);
+        expectedCompletion = setMinutes(expectedCompletion, 0);
+        expectedCompletion = setSeconds(expectedCompletion, 0);
+    }
+    // ────────────────────────────────────────────────────────
+
+    // ─── Double Booking Prevention (Capacity Bug Fix) ─────────
     if (schedule) {
-        const { data: existing, error: checkError } = await supabase
+        const { count, error: checkError } = await supabase
             .from('bookings')
-            .select('id')
+            .select('*', { count: 'exact', head: true })
             .eq('schedule', schedule)
-            .neq('status', 'cancelled')
-            .maybeSingle();
+            .neq('status', 'cancelled');
 
         if (checkError) {
-            console.error('Check double booking error:', checkError);
+            console.error('Check docuble booking error:', checkError);
         }
 
-        if (existing) {
-            return res.status(400).json({ 
-                error: 'This time slot is already booked. Please choose another time.' 
+        if (count >= 8) {
+            return res.status(400).json({
+                error: 'This time slot is fully booked (Max 8 customers). Please choose another time.'
             });
         }
     }
     // ────────────────────────────────────────────────────────────────────────────
 
+    // Also extract new schema fields
+    const { delivery_method, total_weight, downpayment_status } = req.body;
+
     const { data, error } = await supabase
         .from('bookings')
-        .insert([{ user_id: userId, service_type: serviceType, status: 'pending', schedule }])
+        .insert([{
+            user_id: userId,
+            service_type: serviceType,
+            status: 'pending',
+            schedule,
+            delivery_method,
+            total_weight,
+            downpayment_status,
+            expected_completion: expectedCompletion.toISOString()
+        }])
         .select();
 
     if (error) return res.status(500).json({ error: error.message });
@@ -146,7 +183,7 @@ async function testConnection() {
     // Use 'profiles' or another small table to test connection. 
     // If 'profiles' doesn't exist, this might fail, but connection itself is tested.
     const { data, error } = await supabase.from('profiles').select('*').limit(1);
-    
+
     if (error) {
         console.error("❌ Connection Failed:", error.message);
     } else {

@@ -2,13 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import VerticalStepper from "../../../shared/components/VerticalStepper";
 import { supabase } from "../../../lib/supabase";
-import { formatDate, formatTime } from "../../../shared/utils/formatters";
+import { formatTime } from "../../../shared/utils/formatters";
+import { useToast } from "../../../shared/components/Toast";
+import { useConfirm } from "../../../shared/components/ConfirmationModal";
 
 const API_BASE = "http://localhost:5000/api/v1/customer";
 
 export default function BookingDetails() {
   const navigate = useNavigate();
   const { bookingId } = useParams();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,14 +63,14 @@ export default function BookingDetails() {
   }, [fetchBooking]);
 
   const handleCancel = async () => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    if (!(await confirm("Are you sure you want to cancel this booking?"))) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       if (!token) {
-        alert("Session expired. Please log in again.");
+        showToast("Session expired. Please log in again.", "error");
         return;
       }
 
@@ -78,15 +82,15 @@ export default function BookingDetails() {
       });
 
       if (response.ok) {
-        alert("Booking cancelled successfully.");
+        showToast("Booking cancelled successfully.", "success");
         fetchBooking();
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to cancel booking.");
+        showToast(data.error || "Failed to cancel booking.", "error");
       }
     } catch (err) {
       console.error("Error cancelling booking:", err);
-      alert("An error occurred. Please try again.");
+      showToast("An error occurred. Please try again.", "error");
     }
   };
 
@@ -96,7 +100,7 @@ export default function BookingDetails() {
 
   const handleSubmitFeedback = async () => {
     if (feedbackRating === 0) {
-      alert("Please select a rating.");
+      showToast("Please select a rating.", "error");
       return;
     }
 
@@ -106,7 +110,7 @@ export default function BookingDetails() {
       const token = session?.access_token;
 
       if (!token) {
-        alert("Session expired. Please log in again.");
+        showToast("Session expired. Please log in again.", "error");
         return;
       }
 
@@ -123,15 +127,15 @@ export default function BookingDetails() {
       });
 
       if (response.ok) {
-        alert("Feedback submitted successfully. Thank you!");
+        showToast("Feedback submitted successfully. Thank you!", "success");
         fetchBooking();
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to submit feedback.");
+        showToast(data.error || "Failed to submit feedback.", "error");
       }
     } catch (err) {
       console.error("Error submitting feedback:", err);
-      alert("An error occurred. Please try again.");
+      showToast("An error occurred. Please try again.", "error");
     } finally {
       setSubmittingFeedback(false);
     }

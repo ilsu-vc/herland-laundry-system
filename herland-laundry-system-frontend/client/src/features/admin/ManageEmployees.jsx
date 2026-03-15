@@ -4,6 +4,8 @@ import BottomNavbar from '../../shared/navigation/BottomNavbar'
 import InfoCard from '../../shared/components/InfoCard'
 import { FilterSelect, RadioRow } from '../../shared/components/OptionInput'
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../shared/components/Toast';
+import { useConfirm } from '../../shared/components/ConfirmationModal';
 
 // Mock data for seeding
   const mockemployee = [
@@ -16,6 +18,8 @@ import { supabase } from '../../lib/supabase';
 
   export default function ManageEmployees() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const [employee, setEmployee] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -141,11 +145,11 @@ import { supabase } from '../../lib/supabase';
             }
         } else {
             console.error('Failed to update role');
-            alert('Failed to update role.');
+            showToast('Failed to update role.', 'error');
         }
     } catch (error) {
         console.error('Error updating role:', error);
-        alert('An error occurred.');
+        showToast('An error occurred.', 'error');
     }
   };
 
@@ -155,7 +159,7 @@ import { supabase } from '../../lib/supabase';
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return;
+    if (!(await confirm('Are you sure you want to delete this employee? This action cannot be undone.'))) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -171,11 +175,11 @@ import { supabase } from '../../lib/supabase';
         setEmployee((prev) => prev.filter((s) => s.id !== id));
         if (expandedId === id) setExpandedId(null);
       } else {
-        alert('Failed to delete employee.');
+        showToast('Failed to delete employee.', 'error');
       }
     } catch (error) {
       console.error('Error deleting employee:', error);
-      alert('An error occurred while deleting.');
+      showToast('An error occurred while deleting.', 'error');
     }
   };
 

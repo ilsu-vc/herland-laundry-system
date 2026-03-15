@@ -16,6 +16,7 @@ import { FilterSelect, RadioRow } from '../../shared/components/OptionInput';
 import VerticalStepper from '../../shared/components/VerticalStepper';
 import { supabase } from '../../lib/supabase';
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { useConfirm } from "../../shared/components/ConfirmationModal";
 
 const mapLibraries = ["places"];
 
@@ -233,6 +234,7 @@ function getMonthYear(dateString) {
 
 export default function ManageBookings() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [bookings, setBookings] = useState(() => [...initialBookings]);
   const [expandedId, setExpandedId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all"); // New state
@@ -383,8 +385,7 @@ export default function ManageBookings() {
   const undoStatus = async (bookingId) => {
     const currentBooking = bookings.find((booking) => booking.id === bookingId);
     if (!currentBooking || !currentBooking.timeline || currentBooking.timeline.length <= 1) return;
-
-    if (!window.confirm("Are you sure you want to revert this booking to its previous status?")) return;
+    if (!(await confirm("Are you sure you want to revert this booking to its previous status?"))) return;
 
     const updatedTimeline = currentBooking.timeline.slice(0, -1);
     const previousStatusObj = updatedTimeline[updatedTimeline.length - 1];

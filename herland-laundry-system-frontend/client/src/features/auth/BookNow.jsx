@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase";
 import { formatDate, formatTime, getRouteAddresses } from "../../shared/utils/formatters";
 import BookingCalendar from "../../shared/components/BookingCalendar";
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from "@react-google-maps/api";
+import { useToast } from "../../shared/components/Toast";
 
 const mapLibraries = ["places", "geocoding"];
 const defaultCenter = { lat: 14.537751, lng: 121.001379 }; // Pasay approximate
@@ -16,6 +17,7 @@ const defaultCenter = { lat: 14.537751, lng: 121.001379 }; // Pasay approximate
 ========================= */
 export default function BookNow() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [step, setStep] = useState(1);
 
   // Auth Check
@@ -23,7 +25,7 @@ export default function BookNow() {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert("Please sign up or log in to create a booking.");
+        showToast("Please sign up or log in to create a booking.", "error");
         navigate('/signup?redirect=book');
       }
     };
@@ -139,7 +141,7 @@ export default function BookNow() {
           if (response.ok) {
             const data = await response.json();
             if (data.status.toLowerCase() !== "pending") {
-              alert("Only pending bookings can be edited.");
+              showToast("Only pending bookings can be edited.", "error");
               navigate("/bookings");
               return;
             }
@@ -394,7 +396,10 @@ function StepSelectServices({
   setBagDescription,
 }) {
 
+  const [serviceError, setServiceError] = useState("");
+
   const toggleService = (key) => {
+    setServiceError("");
     setServices((prev) => ({ ...prev, [key]: prev[key] === 0 ? 1 : 0 }));
   };
 
@@ -448,12 +453,28 @@ function StepSelectServices({
     );
   }
 
+  const handleNextSubmit = () => {
+    const hasService = Object.values(services).some(val => val > 0);
+    if (!hasService) {
+      setServiceError("Please select at least one laundry service to continue.");
+      return;
+    }
+    setServiceError("");
+    onNext();
+  };
+
   return (
     <>
     <div className="px-0 sm:px-2">
       <h2 className="text-lg font-semibold text-[#3878c2] mb-4 sm:text-xl">
         Select Services
       </h2>
+      
+      {serviceError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-pulse">
+           ⚠️ {serviceError}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {availableServices.map((s) => (
@@ -527,19 +548,11 @@ function StepSelectServices({
           onChange={() => setPaymentMethod("gcash")}
           name="paymentMethod"
         />
-        <RadioRow
-          id="payment-cash"
-          label="Cash"
-          checked={paymentMethod === "cash"}
-          onChange={() => setPaymentMethod("cash")}
-          disabled={collectionInfo.option !== "dropOffPickUpLater"}
-          name="paymentMethod"
-        />
       </div>
 
       {/* Next Button */}
       <button
-        onClick={onNext}
+        onClick={handleNextSubmit}
         className="mt-8 mx-auto block w-40 py-2 rounded text-white font-semibold"
         style={{ backgroundColor: "#4bad40" }}
       >
@@ -697,6 +710,7 @@ function StepCollection({
   setDeliveryInfo,
   totalEstimatedHours,
 }) {
+  const { showToast } = useToast();
   const optionLabels = {
     dropOffPickUpLater: "Drop-off & Pick up later",
     dropOffDelivered: "Drop-off & Delivered",
@@ -714,16 +728,16 @@ function StepCollection({
   // Autofill texts based on selected option
   const autofill = {
     dropOffPickUpLater: {
-      collection: "I'll drop off my laundry",
-      delivery: "I'll pick up my laundry",
+      collection: "This is the date and time my laundry will get picked-up",
+      delivery: "This is the date and time my laundry will get picked-up",
     },
     dropOffDelivered: {
-      collection: "I'll drop off my laundry",
-      delivery: "Deliver my laundry to me",
+      collection: "This is the date and time my laundry will get picked-up",
+      delivery: "This is the date and time my laundry will get picked-up",
     },
     pickedUpDelivered: {
-      collection: "Pick up my laundry from me",
-      delivery: "Deliver my laundry to me",
+      collection: "This is the date and time my laundry will get picked-up",
+      delivery: "This is the date and time my laundry will get picked-up",
     },
   };
 
@@ -737,8 +751,18 @@ function StepCollection({
       const diffMs = pickUp - dropOff;
       const diffHrs = diffMs / (1000 * 60 * 60);
 
+      // Check if delivery is within 4 hours before closing time (18:00)
+      const deliveryHour = parseInt(deliveryInfo.time.split(':')[0], 10);
+      const isWithin4HoursToClosing = (18 - deliveryHour) < 4;
+
       // Add a small buffer of 0.01 to avoid floating point issues
-      if (diffHrs < totalEstimatedHours - 0.01) {
+      if (isWithin4HoursToClosing) {
+        setIsValidTime(false);
+        setErrorMessage("Delivery schedule cannot be booked within 4 hours before closing time (after 2:00 PM).");
+      } else if (diffHrs < 0) {
+        setIsValidTime(false);
+        setErrorMessage("Delivery time cannot be before the collection time.");
+      } else if (diffHrs < totalEstimatedHours - 0.01 && totalEstimatedHours > 0) {
         setIsValidTime(false);
         setErrorMessage(`Pick-up time is too early. Selected services need about ${totalEstimatedHours} hours.`);
       } else {
@@ -750,7 +774,7 @@ function StepCollection({
 
   const handleNextSubmit = () => {
     if (!isValidTime) {
-      alert(errorMessage);
+        showToast(errorMessage, "error");
       return;
     }
     onNext();
@@ -835,12 +859,12 @@ function StepCollection({
             onTimeChange={(time) => setCollectionInfo(prev => ({ ...prev, time }))}
           />
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 items-center md:items-start">
             <input
               type="text"
               value={autofill[option].collection}
               readOnly
-              className="w-full p-2.5 rounded border border-[#3878c2] text-[#3878c2] bg-white text-sm font-medium"
+              className="w-full max-w-sm p-2 text-center rounded border border-[#3878c2] text-[#3878c2] bg-white text-[10px] sm:text-xs font-medium"
             />
           </div>
         </div>
@@ -861,12 +885,12 @@ function StepCollection({
             onTimeChange={(time) => setDeliveryInfo(prev => ({ ...prev, time }))}
           />
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 items-center md:items-start">
             <input
               type="text"
               value={autofill[option].delivery}
               readOnly
-              className="w-full p-2.5 rounded border border-[#3878c2] text-[#3878c2] bg-white text-sm font-medium"
+              className="w-full max-w-sm p-2 text-center rounded border border-[#3878c2] text-[#3878c2] bg-white text-[10px] sm:text-xs font-medium"
             />
           </div>
         </div>
@@ -941,6 +965,7 @@ function RadioRow({
    Step 3 - Address
 ========================= */
 function StepAddress({ onBack, onNext, isMapLoaded, initialLocation, saveHomeAddress, setSaveHomeAddress }) {
+  const { showToast } = useToast();
   const [autocomplete, setAutocomplete] = useState(null);
   const [location, setLocation] = useState(initialLocation?.lat ? initialLocation : { address: "", lat: null, lng: null });
   const [mapCenter, setMapCenter] = useState(initialLocation?.lat ? { lat: initialLocation.lat, lng: initialLocation.lng } : defaultCenter);
@@ -984,8 +1009,9 @@ function StepAddress({ onBack, onNext, isMapLoaded, initialLocation, saveHomeAdd
           setLocation({ address: "", lat, lng });
           setSearchValue("");
           // Prompt the customer to type their address in the search box
-          alert(
-            "📍 Your pin has been set!\n\nWe couldn't automatically detect your street name. Please type your full address (e.g. '123 Rizal St, Las Piñas') in the search bar above so we can record it correctly."
+          showToast(
+            "📍 Your pin has been set!\n\nWe couldn't automatically detect your street name. Please type your full address (e.g. '123 Rizal St, Las Piñas') in the search bar above so we can record it correctly.",
+            "error"
           );
         }
       });
@@ -993,8 +1019,9 @@ function StepAddress({ onBack, onNext, isMapLoaded, initialLocation, saveHomeAdd
       setIsGeocoding(false);
       setLocation({ address: "", lat, lng });
       setSearchValue("");
-      alert(
-        "📍 Your pin has been set!\n\nPlease type your complete address in the search bar above so we can record it."
+      showToast(
+        "📍 Your pin has been set!\n\nPlease type your complete address in the search bar above so we can record it.",
+        "error"
       );
     }
   };
@@ -1008,11 +1035,11 @@ function StepAddress({ onBack, onNext, isMapLoaded, initialLocation, saveHomeAdd
 
   const handleNext = () => {
     if (!location.lat) {
-      alert("Please pin your location on the map or search for your address first.");
+      showToast("Please pin your location on the map or search for your address first.", "error");
       return;
     }
     if (!location.address || location.address.trim().length < 5) {
-      alert("Please confirm your address by searching for it or typing it in the search box above.");
+      showToast("Please confirm your address by searching for it or typing it in the search box above.", "error");
       return;
     }
     onNext(location);
@@ -1162,10 +1189,12 @@ function StepReview({
   saveHomeAddress,
 }) {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("success");
-   const [referenceNumber, setReferenceNumber] = useState("");
-   const [paymentReference, setPaymentReference] = useState("");
+  const [backendError, setBackendError] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
 
   const calculateTotal = () => {
     let total = 0;
@@ -1411,7 +1440,7 @@ function StepReview({
                 const ref = isEditMode ? editId : (result.booking?.reference_number || nextReference);
                 
                 if (isEditMode) {
-                  alert("Booking updated successfully.");
+                  showToast("Booking updated successfully.", "success");
                   navigate(`/bookings/${editId}`);
                   return;
                 }
@@ -1443,12 +1472,14 @@ function StepReview({
                 const errData = await response.json().catch(() => ({}));
                 console.error("Booking request failed:", errData.error || response.statusText);
                 setBookingStatus("error");
+                setBackendError(errData.error || "Please try again.");
                 setReferenceNumber("");
                 setPaymentReference("");
               }
             } catch (err) {
               console.error("Booking request error:", err);
               setBookingStatus("error");
+              setBackendError("An unexpected error occurred. Please try again.");
               setReferenceNumber("");
               setPaymentReference("");
             }
@@ -1507,7 +1538,7 @@ function StepReview({
             <p className="mt-1 text-sm text-[#3878c2]">
               {bookingStatus === "success"
                 ? `Reference number: ${referenceNumber || "-"}`
-                : "Please try again."}
+                : backendError}
             </p>
             {bookingStatus === "success" ? (
               <p className="mt-2 text-xs text-[#3878c2]">

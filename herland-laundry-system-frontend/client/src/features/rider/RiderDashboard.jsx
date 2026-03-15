@@ -2,11 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatDate, formatTime, getRouteAddresses } from '../../shared/utils/formatters'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../shared/components/Toast'
+import { useConfirm } from '../../shared/components/ConfirmationModal'
 
 
 
 export default function RiderDashboard() {
 	const navigate = useNavigate()
+	const { showToast } = useToast()
+	const confirm = useConfirm()
 	const [bookings, setBookings] = useState([])
 	const [availableBookings, setAvailableBookings] = useState([])
 	const [activeTab, setActiveTab] = useState('available') // 'available' or 'assigned'
@@ -66,7 +70,7 @@ export default function RiderDashboard() {
 				setActiveTab('assigned')
 			} else {
 				const err = await response.json()
-				alert(err.error || 'Failed to accept booking')
+				showToast(err.error || 'Failed to accept booking', 'error')
 			}
 		} catch (err) {
 			console.error('Accept error:', err)
@@ -74,7 +78,7 @@ export default function RiderDashboard() {
 	}
 
 	const handleDecline = async (id) => {
-		if (!window.confirm('Are you sure you want to decline this assignment? It will be hidden from your pool.')) return
+		if (!(await confirm('Are you sure you want to decline this assignment? It will be hidden from your pool.'))) return
 		try {
 			const { data: { session } } = await supabase.auth.getSession()
 			const token = session?.access_token
@@ -85,7 +89,7 @@ export default function RiderDashboard() {
 			if (response.ok) {
 				await fetchAll()
 			} else {
-				alert('Failed to decline booking')
+				showToast('Failed to decline booking', 'error')
 			}
 		} catch (err) {
 			console.error('Decline error:', err)

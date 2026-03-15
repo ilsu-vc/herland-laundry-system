@@ -221,11 +221,11 @@ export default function LandingPage() {
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3878c2]"></div>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 items-start">
             {dynamicRates.map((category, index) => (
               <div
                 key={category.name}
-                className={`rounded-xl border border-[#3878c2] p-5 transition-all ${
+                className={`h-fit self-start rounded-xl border border-[#3878c2] p-5 transition-all ${
                   isWideDesktop || openRate === index ? 'bg-[#63bce6]/10' : ''
                 }`}
               >
@@ -296,11 +296,11 @@ export default function LandingPage() {
           Frequently Asked Questions
         </h2>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
           {defaultFaqs.map((faq, index) => (
             <div
               key={faq.id}
-              className={`rounded-xl border border-[#3878c2] p-4 transition-all ${
+              className={`h-fit self-start rounded-xl border border-[#3878c2] p-4 transition-all ${
                 isWideDesktop || openFaq === index ? 'bg-[#63bce6]/10' : ''
               }`}
             >

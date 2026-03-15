@@ -10,13 +10,30 @@ router.patch('/update-status/:id', verifyRole('staff'), async (req, res) => {
     const { new_status } = req.body; // Get the new status from the frontend
 
     // 1. List of valid statuses to prevent accidental typos in the database
-    const validStatuses = ['pending', 'picked_up', 'washing', 'ready', 'Delivery in Progress', 'delivered'];
+    const validStatuses = ['pending', 'picked_up', 'washing', 'ready', 'Delivery in Progress', 'delivered', 'In Progress'];
 
     if (!validStatuses.includes(new_status)) {
         return res.status(400).json({ error: 'Invalid status update' });
     }
 
     try {
+        if (new_status === 'In Progress') {
+            const { data: bData, error: fetchErr } = await supabase
+                .from('bookings')
+                .select('payment_details, downpayment_status')
+                .eq('id', id)
+                .single();
+            
+            if (!fetchErr && bData) {
+                const pStatus = bData.payment_details?.status;
+                const dpStatus = bData.downpayment_status || bData.payment_details?.downpayment_status;
+                
+                if (pStatus !== 'Payment Confirmed' && dpStatus !== 'verified') {
+                    return res.status(400).json({ error: "Cannot transition to 'In Progress' until 25% downpayment or full payment proof is verified by staff." });
+                }
+            }
+        }
+
         // 2. Update the specific booking in Supabase
         const { data, error } = await supabase
             .from('bookings')

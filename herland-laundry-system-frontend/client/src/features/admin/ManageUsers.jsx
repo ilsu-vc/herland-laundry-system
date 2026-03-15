@@ -4,6 +4,8 @@ import BottomNavbar from '../../shared/navigation/BottomNavbar'
 import InfoCard from '../../shared/components/InfoCard'
 import { FilterSelect, RadioRow } from '../../shared/components/OptionInput'
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../shared/components/Toast';
+import { useConfirm } from '../../shared/components/ConfirmationModal';
 
 const getMonthYear = (dateValue) => {
   if (!dateValue) return '';
@@ -17,6 +19,8 @@ const getMonthYear = (dateValue) => {
 
 export default function ManageUsers() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -148,11 +152,11 @@ export default function ManageUsers() {
         } else {
             console.error('Failed to update role');
             // Handle error (e.g., show notification)
-            alert('Failed to update role. Please try again.');
+            showToast('Failed to update role. Please try again.', 'error');
         }
     } catch (error) {
         console.error('Error updating role:', error);
-        alert('An error occurred while updating role.');
+        showToast('An error occurred while updating role.', 'error');
     }
   };
 
@@ -166,7 +170,7 @@ export default function ManageUsers() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    if (!(await confirm('Are you sure you want to delete this user? This action cannot be undone.'))) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -182,11 +186,11 @@ export default function ManageUsers() {
         setCustomers((prev) => prev.filter((c) => c.id !== id));
         if (expandedId === id) setExpandedId(null);
       } else {
-        alert('Failed to delete user.');
+        showToast('Failed to delete user.', 'error');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('An error occurred while deleting.');
+      showToast('An error occurred while deleting.', 'error');
     }
   };
 

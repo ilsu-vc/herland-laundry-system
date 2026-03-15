@@ -405,12 +405,8 @@ router.patch('/my-bookings/:id/cancel', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        if (booking.status !== 'pending' && booking.status !== 'Booking Received') {
-             // In some places status is 'pending', in others it might be the label. 
-             // Let's be safe and check both or assume 'pending' is the DB value.
-            if (booking.status.toLowerCase() !== 'pending') {
-                return res.status(400).json({ error: 'Only pending bookings can be cancelled.' });
-            }
+        if (booking.status !== 'pending') {
+            return res.status(400).json({ error: 'Only pending bookings can be cancelled.' });
         }
 
         const nowIso = new Date().toISOString();
@@ -457,7 +453,7 @@ router.patch('/my-bookings/:id/update', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        if (booking.status.toLowerCase() !== 'pending') {
+        if (booking.status !== 'pending') {
             return res.status(400).json({ error: 'Only pending bookings can be modified.' });
         }
 

@@ -4,9 +4,11 @@ import BottomNavbar from '../../shared/navigation/BottomNavbar'
 import InfoCard from '../../shared/components/InfoCard'
 import { RadioRow } from '../../shared/components/OptionInput'
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../shared/components/Toast';
 
 export default function ManageAdmins() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -117,11 +119,11 @@ export default function ManageAdmins() {
             // If role changed but still in tracked roles, it will naturally move between filtered lists
         } else {
             console.error('Failed to update role');
-            alert('Failed to update role.');
+            showToast('Failed to update role.', 'error');
         }
     } catch (error) {
         console.error('Error updating role:', error);
-        alert('An error occurred.');
+        showToast('An error occurred.', 'error');
     }
   };
 

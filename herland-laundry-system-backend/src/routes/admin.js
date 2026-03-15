@@ -214,6 +214,23 @@ router.put('/bookings/:id/status', verifyRole(['Admin', 'Staff']), async (req, r
     }
 
     try {
+        if (status === 'In Progress') {
+            const { data: bData, error: fetchErr } = await supabase
+                .from('bookings')
+                .select('payment_details, downpayment_status')
+                .eq('id', id)
+                .single();
+            
+            if (!fetchErr && bData) {
+                const pStatus = bData.payment_details?.status;
+                const dpStatus = bData.downpayment_status || bData.payment_details?.downpayment_status;
+                
+                if (pStatus !== 'Payment Confirmed' && dpStatus !== 'verified') {
+                    return res.status(400).json({ error: "Cannot transition to 'In Progress' until 25% downpayment or full payment proof is verified by staff." });
+                }
+            }
+        }
+
         const updateData = {
             status: status,
             stage: nextStage,

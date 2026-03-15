@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../../shared/components/Toast';
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -23,7 +25,8 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInteracted, setIsInteracted] = useState(false);
+  const [touched, setTouched] = useState({});
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,7 +34,15 @@ export default function Signup() {
       ...prev,
       [name]: value,
     }));
-    if (!isInteracted) setIsInteracted(true);
+  };
+
+  const handleBlur = (e) => {
+    setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+    if (e.target.name === 'password') setPasswordFocused(false);
+  };
+
+  const handleFocus = (e) => {
+    if (e.target.name === 'password') setPasswordFocused(true);
   };
 
   // Password condition checks
@@ -52,6 +63,25 @@ export default function Signup() {
   });
 
   const passwordStatus = checkPasswordConditions(formData.password);
+
+  const renderCondition = (condition, text) => {
+    let colorClass = 'text-[#b4b4b4]';
+    let icon = '○';
+
+    if (condition) {
+      colorClass = 'text-[#4bad40]';
+      icon = '✓';
+    } else if (touched.password && !passwordFocused) {
+      colorClass = 'text-[#ff0000]';
+      icon = '✗';
+    }
+
+    return (
+      <li className={`${colorClass} flex items-center gap-1`}>
+        <span className="w-4">{icon}</span> <span>{text}</span>
+      </li>
+    );
+  };
 
   useEffect(() => {
     const requiredFieldsFilled =
@@ -116,11 +146,11 @@ export default function Signup() {
       } else {
         // Backend returned an error (e.g., rate limit, email exists)
         console.warn('Backend registration failed:', data.error);
-        alert(`Registration failed: ${data.error || 'Unknown error'}`);
+        showToast(`Registration failed: ${data.error || 'Unknown error'}`, 'error');
       }
     } catch (error) {
       console.error('Registration error:', error);
-      alert(`An error occurred: ${error.message}`);
+      showToast(`An error occurred: ${error.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +171,7 @@ export default function Signup() {
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="First Name"
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
@@ -153,6 +184,7 @@ export default function Signup() {
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Last Name"
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
@@ -165,6 +197,7 @@ export default function Signup() {
               name="phoneNumber"
               value={formData.phoneNumber}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Phone Number"
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
@@ -177,6 +210,7 @@ export default function Signup() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Email Address (optional)"
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
@@ -189,6 +223,8 @@ export default function Signup() {
               name="password"
               value={formData.password}
               onChange={handleChange}
+              onBlur={handleBlur}
+              onFocus={handleFocus}
               placeholder="Password"
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
@@ -238,13 +274,13 @@ export default function Signup() {
           </div>
 
           {/* Password Conditions */}
-          {isInteracted && (
-            <ul className="text-xs sm:text-sm text-[#ff0000] mb-3 list-none">
-              {!passwordStatus.length && <li>Must have at least 8 characters</li>}
-              {!passwordStatus.lowercase && <li>Must contain a lowercase letter</li>}
-              {!passwordStatus.uppercase && <li>Must contain an uppercase letter</li>}
-              {!passwordStatus.number && <li>Must contain a number</li>}
-              {!passwordStatus.specialChar && <li>Must contain a special character</li>}
+          {(passwordFocused || touched.password || formData.password.length > 0) && (
+            <ul className="text-xs sm:text-sm mb-3 list-none space-y-1">
+              {renderCondition(passwordStatus.length, 'Must have at least 8 characters')}
+              {renderCondition(passwordStatus.lowercase, 'Must contain a lowercase letter')}
+              {renderCondition(passwordStatus.uppercase, 'Must contain an uppercase letter')}
+              {renderCondition(passwordStatus.number, 'Must contain a number')}
+              {renderCondition(passwordStatus.specialChar, 'Must contain a special character')}
             </ul>
           )}
 
@@ -255,6 +291,7 @@ export default function Signup() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Confirm Password"
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
@@ -301,10 +338,10 @@ export default function Signup() {
             </span>
 
             {/* Error Messages */}
-            {isInteracted && errors.requiredFields && (
+            {(touched.firstName && touched.lastName && touched.phoneNumber && touched.password && touched.confirmPassword) && errors.requiredFields && (
               <p className="text-xs sm:text-sm text-[#ff0000] mt-1">{errors.requiredFields}</p>
             )}
-            {isInteracted && errors.confirmPassword && (
+            {(touched.confirmPassword || formData.confirmPassword.length > 0) && errors.confirmPassword && (
               <p className="text-xs sm:text-sm text-[#ff0000] mt-1">{errors.confirmPassword}</p>
             )}
           </div>
