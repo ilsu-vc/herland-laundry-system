@@ -10,7 +10,7 @@ Ensure you have git installed. 2. Pull the Latest Code Pull the latest code from
 
 bash
 git checkout Lance-Branch-2
-git pull origin Lance-Branch-2 3. Set Up Environment Variables You will see two new files in the codebase called
+git pull origin Lance-Branch-2. Set Up Environment Variables You will see two new files in the codebase called
 
 .env.example
 . You need to create your own actual
@@ -54,10 +54,13 @@ files via Discord, Slack, etc.!)
 ## Recent Features
 
 ### 🔐 Password Toggle
+
 Users can now easily toggle the visibility of their password on the login screen. This enhancement improves accessibility and ensures users can verify their input before logging in, while still maintaining high security.
 
 ### 🔔 Notification System Restored
+
 The notification feature has been fully restored and optimized for all user roles:
+
 - **Customers**: Receive updates on booking status, laundry readiness, and payment confirmations.
 - **Staff**: Get notified about new walk-in drop-offs and assigned tasks.
 - **Riders**: Get instant updates on assigned pickups and deliveries.
