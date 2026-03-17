@@ -30,6 +30,11 @@ export default function Signup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'phoneNumber') {
+      const cleanValue = value.replace(/\D/g, '').slice(0, 11);
+      setFormData((prev) => ({ ...prev, [name]: cleanValue }));
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -199,6 +204,7 @@ export default function Signup() {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Phone Number"
+              maxLength={11}
               className="w-full outline-none border border-[#3878c2] rounded px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] bg-[#ffffff]"
             />
           </div>
@@ -339,7 +345,7 @@ export default function Signup() {
 
             {/* Error Messages */}
             {(touched.firstName && touched.lastName && touched.phoneNumber && touched.password && touched.confirmPassword) && errors.requiredFields && (
-              <p className="text-xs sm:text-sm text-[#ff0000] mt-1">{errors.requiredFields}</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">{errors.requiredFields}</p>
             )}
             {(touched.confirmPassword || formData.confirmPassword.length > 0) && errors.confirmPassword && (
               <p className="text-xs sm:text-sm text-[#ff0000] mt-1">{errors.confirmPassword}</p>

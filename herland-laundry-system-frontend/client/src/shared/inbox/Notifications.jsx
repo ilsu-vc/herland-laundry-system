@@ -84,16 +84,35 @@ const RIDER_NOTIFICATIONS = [
   },
 ];
 
+const ADMIN_NOTIFICATIONS = [
+  {
+    id: "ADM-4101",
+    title: "System Update",
+    message: "The Herland Laundry System has been updated to version 2.1.0.",
+    time: "Feb 8, 2026 · 8:00 AM",
+    read: false,
+  },
+  {
+    id: "ADM-4102",
+    title: "New Employee Registered",
+    message: "A new staff member, Jane Doe, has been added to the system.",
+    time: "Feb 7, 2026 · 11:30 AM",
+    read: false,
+  },
+];
+
 const ROLE_NOTIFICATIONS = {
   user: USER_NOTIFICATIONS,
   staff: STAFF_NOTIFICATIONS,
   rider: RIDER_NOTIFICATIONS,
+  admin: ADMIN_NOTIFICATIONS,
 };
 
 const FILTERS = ["All", "Unread", "Today"];
 const LONG_PRESS_DURATION = 600; // milliseconds
 
 const getRoleFromPath = (pathname = "") => {
+  if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/staff")) return "staff";
   if (pathname.startsWith("/rider")) return "rider";
   return "user";

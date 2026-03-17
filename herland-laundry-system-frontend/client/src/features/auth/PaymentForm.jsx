@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
 const API_BASE = 'http://localhost:5000/api/v1/customer';
 
 export default function PaymentForm() {
+	const navigate = useNavigate();
 	const location = useLocation();
 	const bookingReference = location.state?.bookingReference || '';
 	const amountToPayFromState = location.state?.amountToPay;
@@ -163,7 +164,7 @@ export default function PaymentForm() {
 							}}
 							disabled={submitting}
 							placeholder="Enter your GCash reference number"
-							className="w-full rounded border border-[#3878c2] px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] outline-none disabled:opacity-50"
+							className="w-full rounded border border-[#3878c2] bg-white px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] outline-none disabled:opacity-50"
 						/>
 						{referenceNumber && !isValidReference ? (
 							<p className="mt-1 text-xs text-[#e55353]">
@@ -173,7 +174,7 @@ export default function PaymentForm() {
 					</div>
 
 					<p className="text-sm font-semibold text-[#3878c2]">
-						Please send your payment screenshot via Viber: 09XXXXXXXXX
+						Please send your payment screenshot via Viber: <a href="viber://chat?number=%2B639123456789" className="underline hover:text-[#4bad40]">09123456789</a>
 					</p>
 					<p className="text-sm font-semibold text-[#4bad40]">
 						I understand that my booking will only be processed once payment is
@@ -194,12 +195,43 @@ export default function PaymentForm() {
 				</form>
 
 				{submitted ? (
-					<div className="mt-5 rounded-lg border border-[#d9e8fb] bg-[#f5fbff] p-4">
-						<p className="text-sm font-semibold text-[#3878c2]">
-							{isDownpayment 
-								? "Downpayment submitted successfully! Your booking is now being processed. You can pay the remaining 75% balance upon collection."
-								: "Submitted successfully. Staff will now mark your payment status after verification."}
-						</p>
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+						<div className="w-full max-w-sm scale-100 transform rounded-2xl bg-white p-6 text-center text-[#3878c2] shadow-2xl transition-all">
+							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#e6f7e6]">
+								<svg
+									className="h-8 w-8 text-[#4bad40]"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									strokeWidth={2.5}
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										d="m4.5 12.75 6 6 9-13.5"
+									/>
+								</svg>
+							</div>
+							
+							<h3 className="text-xl font-bold text-[#3878c2]">Booking Accepted</h3>
+							
+							<div className="mt-4 space-y-2">
+								<p className="text-sm font-semibold leading-relaxed">
+									Please wait for your booking to be verified or processed.
+								</p>
+								<p className="text-xs text-gray-500">
+									Our staff will verify your GCash payment shortly. You can track your booking status in your dashboard.
+								</p>
+							</div>
+
+							<button
+								onClick={() => navigate('/')}
+								className="mt-8 w-full rounded-xl bg-[#4bad40] py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#3e8e35] active:scale-95"
+							>
+								Back to Home
+							</button>
+						</div>
 					</div>
 				) : null}
 			</div>

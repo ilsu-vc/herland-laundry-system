@@ -50,3 +50,17 @@ Note on Hot-Reloading: We have set up volume mounts, meaning if you make changes
 
 .env
 files via Discord, Slack, etc.!)
+
+## Recent Features
+
+### 🔐 Password Toggle
+Users can now easily toggle the visibility of their password on the login screen. This enhancement improves accessibility and ensures users can verify their input before logging in, while still maintaining high security.
+
+### 🔔 Notification System Restored
+The notification feature has been fully restored and optimized for all user roles:
+- **Customers**: Receive updates on booking status, laundry readiness, and payment confirmations.
+- **Staff**: Get notified about new walk-in drop-offs and assigned tasks.
+- **Riders**: Get instant updates on assigned pickups and deliveries.
+- **Admins**: Receive system-wide updates and reports.
+
+The system uses role-specific routing to ensure everyone gets the information relevant to them.

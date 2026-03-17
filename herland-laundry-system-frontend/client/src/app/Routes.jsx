@@ -35,11 +35,12 @@ const PageLoader = () => (
 )
 
 function resolveNotificationsPathByRole() {
-	const activeRole = window.sessionStorage.getItem('activeRole')
+	const activeRole = (window.sessionStorage.getItem('activeRole') || '').toLowerCase();
 
-	if (activeRole === 'staff') return '/staff/notifications'
-	if (activeRole === 'rider') return '/rider/notifications'
-	return '/user/notifications'
+	if (activeRole === 'admin') return '/admin/notifications';
+	if (activeRole === 'staff') return '/staff/notifications';
+	if (activeRole === 'rider') return '/rider/notifications';
+	return '/user/notifications';
 }
 
 function NotificationsRoleRedirect() {
@@ -98,6 +99,7 @@ export default function AppRoutes() {
 				<Route path="/user/notifications" element={<Notifications />} />
 				<Route path="/staff/notifications" element={<Notifications />} />
 				<Route path="/rider/notifications" element={<Notifications />} />
+				<Route path="/admin/notifications" element={<Notifications />} />
 				<Route path="/profile" element={<Profile />} />
 			</Routes>
 		</Suspense>

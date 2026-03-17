@@ -34,6 +34,11 @@ export default function BottomNavbar() {
   };
 
   const handleNavItemClick = (item) => {
+    if (item.isExternal) {
+      window.open(item.path, '_blank');
+      return;
+    }
+
     if (!item.sectionId) {
       if (item.path === '/landing' && location.pathname === '/landing') {
         window.scrollTo({ top: 0, behavior: 'smooth' });

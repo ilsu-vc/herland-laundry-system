@@ -18,7 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { useConfirm } from "../../shared/components/ConfirmationModal";
 
-const mapLibraries = ["places"];
+import { GOOGLE_MAPS_LIBRARIES } from "../../shared/constants/maps";
 
 const API_BASE = 'http://localhost:5000/api/v1/admin';
 
@@ -190,6 +190,9 @@ const getCollectionDetails = (booking) => ({
   deliveryTime: booking.collectionDetails?.deliveryTime || "",
   lat: booking.collectionDetails?.lat || null,
   lng: booking.collectionDetails?.lng || null,
+  pickupAddress: booking.collectionDetails?.pickupAddress || "",
+  deliveryAddress: booking.collectionDetails?.deliveryAddress || "",
+  customerAddress: booking.collectionDetails?.customerAddress || "",
 });
 
 const getPaymentDetails = (booking) => {
@@ -253,7 +256,7 @@ export default function ManageBookings() {
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "").trim(),
-    libraries: mapLibraries,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Fetch bookings from the database via backend API
@@ -807,20 +810,34 @@ export default function ManageBookings() {
                       <p className="text-xs font-semibold text-[#3878c2]">Collection Mode</p>
                       <p className="mt-1 text-sm text-[#374151]">{collectionDetails.mode}</p>
                     </div>
+                    {selectedBooking.riderName && (
+                      <div>
+                        <p className="text-xs font-semibold text-[#4bad40]">Assigned Rider</p>
+                        <p className="mt-1 text-sm font-bold text-[#4bad40]">{selectedBooking.riderName}</p>
+                      </div>
+                    )}
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-semibold text-[#3878c2]">Pickup Address</p>
+                      <p className="mt-1 text-sm text-[#374151]">{collectionDetails.pickupAddress || "-"}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-semibold text-[#3878c2]">Delivery Address</p>
+                      <p className="mt-1 text-sm text-[#374151]">{collectionDetails.deliveryAddress || "-"}</p>
+                    </div>
                     {collectionDetails.customerAddress && (
                       <div className="md:col-span-2 rounded-lg bg-gray-50 border border-gray-100 p-3 mt-1">
-                        <p className="text-xs font-semibold text-[#b4b4b4] uppercase">Home / Pinned Address</p>
+                        <p className="text-xs font-semibold text-[#b4b4b4] uppercase">Pinned Address (Geo-Map)</p>
                         <p className="mt-1 text-sm text-[#374151] font-medium">{collectionDetails.customerAddress}</p>
                       </div>
                     )}
                     <div>
-                      <p className="text-xs font-semibold text-[#3878c2]">Collection Schedule</p>
+                      <p className="text-xs font-semibold text-[#3878c2]">Scheduled Pickup</p>
                       <p className="mt-1 text-sm text-[#374151]">
                         {formatDateForDisplay(collectionDetails.collectionDate)} • {formatTimeForDisplay(collectionDetails.collectionTime)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[#3878c2]">Delivery Schedule</p>
+                      <p className="text-xs font-semibold text-[#3878c2]">Scheduled Drop-Off</p>
                       <p className="mt-1 text-sm text-[#374151]">
                         {formatDateForDisplay(collectionDetails.deliveryDate)} • {formatTimeForDisplay(collectionDetails.deliveryTime)}
                       </p>

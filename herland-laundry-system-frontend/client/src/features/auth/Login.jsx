@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function Login() {
   const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Validation
   useEffect(() => {
@@ -171,12 +173,23 @@ export default function Login() {
             <div className="flex flex-col mb-4">
               <div className="flex items-center border border-[#3878c2] rounded px-3 py-2">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   className="w-full outline-none bg-transparent text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] placeholder:font-normal"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[#3878c2] focus:outline-none hover:text-[#4bad40] transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
               </div>
               <div className="flex justify-end mt-1">
                 <button

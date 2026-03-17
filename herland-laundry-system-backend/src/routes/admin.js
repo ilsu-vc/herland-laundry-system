@@ -170,13 +170,15 @@ router.get('/bookings', verifyRole(['Admin', 'Staff']), async (req, res) => {
 
         // Fetch profiles for customer names
         const userIds = [...new Set((bookings || []).map(b => b.user_id).filter(Boolean))];
+        const riderIds = [...new Set((bookings || []).map(b => b.rider_id).filter(Boolean))];
+        const allProfileIds = [...new Set([...userIds, ...riderIds])];
         let profilesMap = {};
 
-        if (userIds.length > 0) {
+        if (allProfileIds.length > 0) {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
                 .select('id, full_name')
-                .in('id', userIds);
+                .in('id', allProfileIds);
 
             if (!profileError && profiles) {
                 profilesMap = Object.fromEntries(profiles.map(p => [p.id, p.full_name]));
@@ -197,6 +199,8 @@ router.get('/bookings', verifyRole(['Admin', 'Staff']), async (req, res) => {
             serviceDetails: b.service_details || null,
             collectionDetails: b.collection_details || null,
             paymentDetails: b.payment_details || null,
+            riderId: b.rider_id || null,
+            riderName: b.rider_id ? (profilesMap[b.rider_id] || 'Selected Rider') : null,
             notes: b.notes || '',
         }));
 
