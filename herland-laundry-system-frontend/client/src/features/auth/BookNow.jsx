@@ -544,29 +544,11 @@ function StepSelectServices({
           />
         </div>
 
-        {/* Weight & Price Guide */}
+        {/* Weight Guide */}
         <div className="lg:col-span-2 grid gap-3">
           <div className="text-xs text-[#3878c2] bg-[#f0f6ff] p-3 rounded-lg border border-[#3878c2]/20">
             <p className="font-semibold mb-1">💡 Weight Guide</p>
             <p>Each load/service covers up to <strong>7.5 kgs</strong> of laundry. For heavier loads, please select additional services or contact us for assistance.</p>
-          </div>
-          
-          <div className="text-xs text-[#3878c2] bg-white p-3 rounded-lg border border-[#3878c2]">
-            <p className="font-semibold mb-2">💰 Quick Price Guide</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              {availableServices.map(s => (
-                <div key={s.id} className="flex justify-between border-b border-gray-100 pb-1">
-                  <span>{s.name}</span>
-                  <span className="font-bold">₱{s.currentPrice.toFixed(0)}</span>
-                </div>
-              ))}
-              {availableAddons.map(a => (
-                <div key={a.id} className="flex justify-between border-b border-gray-100 pb-1">
-                  <span>{a.name} (Add-on)</span>
-                  <span className="font-bold">₱{a.currentPrice.toFixed(0)}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
