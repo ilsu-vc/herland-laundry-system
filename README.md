@@ -6,11 +6,11 @@ Here are the steps to get your local environment running:
 1. Prerequisites
 
 Ensure you have Docker Desktop installed and running on your machine.
-Ensure you have git installed. 2. Pull the Latest Code Pull the latest code from the repository (specifically from the Lance-Branch where the Docker configuration was added):
+Ensure you have git installed. 2. Pull the Latest Code Pull the latest code from the repository (specifically from the Lance-Branch-2 where the recent features and updates were added):
 
 bash
-git checkout Lance-Branch
-git pull origin Lance-Branch 3. Set Up Environment Variables You will see two new files in the codebase called
+git checkout Lance-Branch-2
+git pull origin Lance-Branch-2 3. Set Up Environment Variables You will see two new files in the codebase called
 
 .env.example
 . You need to create your own actual
