@@ -1,13 +1,13 @@
 export const STATUS_META = {
   BookingReceived: { label: "Booking Received", color: "#b4b4b4" },
   BookingAccepted: { label: "Booking Accepted", color: "#ffde59" },
-  ReadyForPickupFromCustomer: { label: "Ready for Pickup from Customer", color: "#63bce6" },
   BookingEdited: { label: "Booking Edited", color: "#ffde59" },
   PaymentConfirmed: { label: "Payment Confirmed", color: "#ffde59" },
+  RiderDispatchedForPickup: { label: "Rider Dispatched for Pickup", color: "#3878c2" },
+  PickedUpFromCustomer: { label: "Picked Up from Customer", color: "#3878c2" },
   InProgress: { label: "In Progress", color: "#ffde59" },
-  DeliveryInProgress: { label: "Delivery in Progress", color: "#3878c2" },
-  ReadyForPickup: { label: "Ready for Pick-up", color: "#63bce6" },
   OutForDelivery: { label: "Out for Delivery", color: "#63bce6" },
+  ReadyForPickup: { label: "Ready for Pick-up", color: "#63bce6" },
   BookingCompleted: { label: "Booking Completed", color: "#4bad40" },
   BookingCancelled: { label: "Booking Cancelled", color: "#ff0000" },
   PaymentFlagged: { label: "Payment Flagged", color: "#ff0000" },
@@ -16,12 +16,12 @@ export const STATUS_META = {
 export const STATUS_ORDER = [
   "BookingReceived",
   "BookingAccepted",
-  "ReadyForPickupFromCustomer",
   "BookingEdited",
   "PaymentConfirmed",
+  "RiderDispatchedForPickup",
+  "PickedUpFromCustomer",
   "InProgress",
   "ReadyForPickup",
-  "DeliveryInProgress",
   "OutForDelivery",
   "BookingCompleted",
   "BookingCancelled",
@@ -31,12 +31,12 @@ export const STATUS_ORDER = [
 export const ACTIVE_STATUSES = [
   "BookingReceived",
   "BookingAccepted",
-  "ReadyForPickupFromCustomer",
   "BookingEdited",
   "PaymentConfirmed",
+  "RiderDispatchedForPickup",
+  "PickedUpFromCustomer",
   "InProgress",
   "ReadyForPickup",
-  "DeliveryInProgress",
   "OutForDelivery",
 ];
 
@@ -49,33 +49,35 @@ export const PAST_STATUSES = [
 export const getStatusKey = (status = "") => {
   const lower = status.toLowerCase();
   if (
+    lower === "pending" ||
     lower === "received" ||
-    lower.includes("received") ||
+    lower.includes("booking received") ||
     lower.includes("placed")
   )
     return "BookingReceived";
-  if (lower === "accepted" || lower.includes("accepted"))
+  if (lower === "accepted" || lower.includes("booking accepted"))
     return "BookingAccepted";
-  if (lower === "ready for pickup from customer" || lower.includes("pickup from customer"))
-    return "ReadyForPickupFromCustomer";
   if (lower === "edited" || lower.includes("edited")) return "BookingEdited";
-  if (lower === "confirmed" || lower.includes("payment confirmed"))
+  if (lower.includes("payment confirmed") || lower === "confirmed")
     return "PaymentConfirmed";
+  if (lower.includes("dispatched for pickup") || lower.includes("rider dispatched"))
+    return "RiderDispatchedForPickup";
+  if (lower.includes("picked up from customer") || lower === "picked_up")
+    return "PickedUpFromCustomer";
   if (lower === "flagged" || lower.includes("flagged")) return "PaymentFlagged";
-  if (lower === "progress" || lower.includes("in progress"))
+  if (lower.includes("in progress") || lower === "progress")
     return "InProgress";
-  if (
-    lower === "delivery in progress" ||
-    lower.includes("delivery in progress")
-  )
-    return "DeliveryInProgress";
-  if (lower === "ready" || lower.includes("ready for pick"))
+  if (lower.includes("ready for pick") || lower === "ready")
     return "ReadyForPickup";
-  if (lower === "out" || lower.includes("out for delivery"))
+  if (lower.includes("out for delivery") || lower === "out" || lower === "ready_for_delivery")
     return "OutForDelivery";
   if (lower === "cancelled" || lower.includes("cancelled"))
     return "BookingCancelled";
-  if (lower === "completed" || lower.includes("completed") || lower === "delivered")
+  if (
+    lower === "completed" ||
+    lower.includes("completed") ||
+    lower === "delivered"
+  )
     return "BookingCompleted";
   return "BookingReceived";
 };

@@ -158,6 +158,11 @@ import { useConfirm } from '../../shared/components/ConfirmationModal';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'phone') {
+        const cleanValue = value.replace(/\D/g, '').slice(0, 11);
+        setEditData((prev) => ({ ...prev, [name]: cleanValue }));
+        return;
+    }
     setEditData((prev) => ({ ...prev, [name]: value }));
   };
 

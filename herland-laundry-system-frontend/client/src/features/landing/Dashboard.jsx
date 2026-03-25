@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Carousel from "../../shared/navigation/Carousel";
-import { ACTIVE_STATUSES, getStatusMeta } from "../../shared/components/StatusMeta";
+import { ACTIVE_STATUSES, getStatusMeta, getStatusKey } from "../../shared/components/StatusMeta";
 import { supabase } from "../../lib/supabase";
 
 const API_BASE = 'http://localhost:5000/api/v1/customer';
@@ -54,7 +54,7 @@ const mapBookingForUI = (b) => {
 
   return {
     id: b.id,
-    status: b.status || "BookingReceived",
+    status: getStatusKey(b.status) || "BookingReceived",
     route: b.collectionOption || "Wash & Dry",
     from: { type: fromType, address: fromLabel },
     to: { type: toType, address: toLabel },
@@ -124,19 +124,8 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const activeBookings = useMemo(
-    () => bookings.filter((b) => ACTIVE_STATUSES.includes(getStatusMeta(b.status).label.replace(/\s/g, ""))) || bookings,
-    [bookings]
-  );
-
-  // Better approach for filtering based on ACTIVE_STATUSES - let's use the actual keys from StatusMeta
   const filteredActiveBookings = useMemo(() => {
-    return bookings.filter(b => {
-      const statusKey = b.status.replace(/\s+/g, '');
-      return ACTIVE_STATUSES.includes(statusKey) || 
-             ACTIVE_STATUSES.includes(b.status) || 
-             ACTIVE_STATUSES.some(s => s.toLowerCase() === statusKey.toLowerCase());
-    });
+    return bookings.filter(b => ACTIVE_STATUSES.includes(b.status));
   }, [bookings]);
 
   return (

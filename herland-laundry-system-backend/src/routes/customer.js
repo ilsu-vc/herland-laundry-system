@@ -186,7 +186,7 @@ function normalizeBooking(b) {
         id: b.reference_number || b.id,
         dbId: b.id,
         userId: b.user_id,
-        customerName: b.service_type || 'Laundry Service',
+        customerName: b.profiles?.full_name || b.service_type || 'Laundry Service',
         date: b.created_at
             ? new Date(b.created_at).toLocaleDateString('en-US', {
                   month: 'short',
@@ -194,6 +194,7 @@ function normalizeBooking(b) {
                   year: 'numeric',
               })
             : '-',
+        createdAt: b.created_at || new Date().toISOString(),
         collectionOption: b.collection_option || 'dropOffPickUpLater',
         stage: b.stage || 'received',
         timeline: b.timeline || [
@@ -204,6 +205,8 @@ function normalizeBooking(b) {
         paymentDetails: b.payment_details || null,
         status: b.status || 'pending',
         notes: b.notes || '',
+        created_at: b.created_at,
+        profiles: b.profiles || null,
     };
 }
 
@@ -240,20 +243,32 @@ async function getBookingByIdOrRef(id, userId, hasBypass = false) {
         query = query.eq('reference_number', id);
     }
 
+    const { data: booking, error } = await query.maybeSingle();
+
+    if (error) {
+        console.error('[DATABASE ERROR] getBookingByIdOrRef:', error);
+        return null;
+    }
+    
+    if (!booking) return null;
+
     // 3. Ownership check if not bypassed
+    // We allow the owner (user_id) AND the assigned rider (rider_id) 
     if (!hasBypass) {
-        query = query.eq('user_id', userId);
+        const isOwner = booking.user_id === userId;
+        const isAssignedRider = booking.rider_id === userId;
+        
+        if (!isOwner && !isAssignedRider) {
+            return null; // Unauthorized to view this booking
+        }
     }
 
-    const { data, error } = await query.maybeSingle();
-    if (error) console.error('[DEBUG] getBookingByIdOrRef error:', error);
-    return data;
+    return booking;
 }
 
 // ─── Get a single booking ──────────────────────────────────────────────────────
 router.get('/my-bookings/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
-    console.log(`[DEBUG] Fetching booking: ${id} for user: ${req.user.id}`);
 
     try {
         const { data: profile } = await supabase
@@ -262,13 +277,21 @@ router.get('/my-bookings/:id', requireAuth, async (req, res) => {
             .eq('id', req.user.id)
             .maybeSingle();
 
-        const hasBypass = profile?.role === 'Admin' || profile?.role === 'Staff';
-        const booking = await getBookingByIdOrRef(id, req.user.id, hasBypass);
+        const bypassOwnership = profile?.role === 'Admin' || profile?.role === 'Staff';
+        const booking = await getBookingByIdOrRef(id, req.user.id, bypassOwnership);
 
         if (!booking) {
-            console.log(`[DEBUG] Booking ${id} not found for user ${req.user.id}`);
             return res.status(404).json({ error: 'Booking not found' });
         }
+
+        // Fetch customer profile separately to ensure correct name mapping
+        const { data: customerProfile } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .eq('id', booking.user_id)
+            .maybeSingle();
+
+        booking.profiles = customerProfile;
 
         res.json(normalizeBooking(booking));
     } catch (error) {

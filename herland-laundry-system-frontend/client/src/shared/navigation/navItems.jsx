@@ -205,6 +205,24 @@ const REGISTER_ICON = (
     />
   </svg>
 );
+
+const CHAT_ICON = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M2.25 12.75V12A9.75 9.75 0 0 1 12 2.25e-04c2.512.001 4.923.999 6.702 2.776s2.775 4.19 2.776 6.702c0 2.512-.999 4.923-2.776 6.702s-4.19 2.775-6.702 2.776h-0.75L6.75 21.75v-2.25a9.75 9.75 0 0 1-4.5-6.75Z"
+    />
+  </svg>
+);
+
 // ================= NAVIGATION =================
 
 const guestNavItems = [
@@ -220,7 +238,7 @@ const userNavItems = [
   { label: "Home", path: "/dashboard", icon: HOME_ICON, requiresAuth: true },
   { label: "Book Now", path: "/book", icon: BOOK_NOW_ICON, requiresAuth: true },
   { label: "Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
-  { label: "Notifications", path: "/user/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
+  { label: "Chat with Us", path: "viber://chat?number=%2B639123456789", icon: CHAT_ICON, requiresAuth: true, isExternal: true },
   { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
 ];
 

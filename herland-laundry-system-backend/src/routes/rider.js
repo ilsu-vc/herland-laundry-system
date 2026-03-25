@@ -57,11 +57,11 @@ router.get('/assigned-bookings', verifyRole('Rider'), async (req, res) => {
  */
 router.get('/available-bookings', verifyRole('Rider'), async (req, res) => {
     try {
-        // Fetch bookings that are in 'Out for Delivery' (or legacy 'Delivery in Progress') or 'Ready for Pickup from Customer' and have no rider
+        // Fetch bookings dispatched for pickup OR out for delivery, with no rider assigned yet
         const { data, error } = await supabase
             .from('bookings')
             .select('*')
-            .or('status.eq.Out for Delivery,status.eq.Delivery in Progress,status.eq.Ready for Pickup from Customer')
+            .or('status.eq.Rider Dispatched for Pickup,status.eq.Out for Delivery')
             .is('rider_id', null)
             .order('created_at', { ascending: false });
 

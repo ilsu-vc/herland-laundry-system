@@ -104,6 +104,7 @@ export default function RiderDashboard() {
 			return {
 				id: booking.reference_number || booking.id,
 				dbId: booking.id,
+				status: booking.status || '',
 				customerName: booking.customerName || 'Customer',
 				pickupAddress: collectionDetails.pickupAddress || fallbackRoute.pickupAddress,
 				pickupDate: collectionDetails.collectionDate || '',
@@ -171,9 +172,17 @@ export default function RiderDashboard() {
 					{currentBookings.map((booking) => (
 						<section key={booking.id} className="rounded-2xl border border-[#3878c2] bg-white p-4 shadow-sm flex flex-col">
 							<button type="button" onClick={() => toggleExpand(booking.id)} className="w-full text-left">
-								<h2 className="text-base font-semibold text-[#3878c2]">
-									{booking.customerName} <span className="ml-1 text-xs font-normal opacity-70">#{booking.id}</span>
-								</h2>
+								<div className="flex items-center gap-2 mb-1 flex-wrap">
+									<h2 className="text-base font-semibold text-[#3878c2]">
+										{booking.customerName} <span className="ml-1 text-xs font-normal opacity-70">#{booking.id}</span>
+									</h2>
+									{booking.status === 'Rider Dispatched for Pickup' && (
+										<span className="rounded-full bg-[#3878c2]/10 px-2 py-0.5 text-[10px] font-bold text-[#3878c2] uppercase tracking-wide">📦 Pickup Task</span>
+									)}
+									{booking.status === 'Out for Delivery' && (
+										<span className="rounded-full bg-[#4bad40]/10 px-2 py-0.5 text-[10px] font-bold text-[#4bad40] uppercase tracking-wide">🚀 Delivery Task</span>
+									)}
+								</div>
 							</button>
 
 							<div className="mt-4 grid gap-4 sm:grid-cols-2 flex-grow">
