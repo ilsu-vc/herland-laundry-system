@@ -1,52 +1,34 @@
-Getting Started with the Project (Docker Setup)
-Hey team! To get the project running locally, you no longer need to install Node.js, npm, or worry about package versions. We are now using Docker. 🐳
+# Lance-Branch-3 Documentation - Digital Receipt & Backend Enhancements
 
-Here are the steps to get your local environment running:
+## Overview
+This branch encapsulates the overhaul of the Digital Receipt system, resolving critical access errors for Riders, and populating the receipt with dynamic, real-time data from the database. It also includes UI optimizations for printing and clearer payment breakdowns.
 
-1. Prerequisites
+## Key Features & Changes
 
-Ensure you have Docker Desktop installed and running on your machine.
-Ensure you have git installed. 2. Pull the Latest Code Pull the latest code from the repository (specifically from the Lance-Branch where the Docker configuration was added):
+### 1. Digital Receipt System Overhaul
+- **Fixed 404 Access Error**: Updated `src/routes/customer.js` to allow assigned **Riders** to view booking receipts. Previously, this was restricted only to the owning Customer.
+- **Dynamic Price Computation**:
+    - Implemented a lookup system in `DigitalReceipt.jsx` to match selected services and addons against the `availableServices/availableAddons` price list stored within each booking.
+    - Automatic calculation for addons based on quantity (e.g., *Pride Lang Po × 2 = ₱218*).
+- **Comprehensive Payment Breakdown**:
+    - Added **Subtotal** (Total booking amount).
+    - Added **TOTAL PAID (Downpayment 25%)** label to clarify partial payments and avoid customer-staff disputes.
+    - Added **BALANCE DUE** field to show the remaining amount payable upon delivery.
 
-bash
-git checkout Lance-Branch
-git pull origin Lance-Branch 3. Set Up Environment Variables You will see two new files in the codebase called
+### 2. UI & Print Optimization
+- **Single-Page Print Layout**: Added a custom `@media print` style block to:
+    - Hide website navigation bars and footers during printing.
+    - Reduce vertical margins and padding to ensure the receipt fits on a single A4 page.
+    - Improve text contrast for physical printing.
+- **Responsive Design**: Maintained the premium look and feel of the receipt while ensuring it remains highly functional on both mobile and desktop views.
 
-.env.example
-. You need to create your own actual
+### 3. Backend Data Normalization
+- **Profile Integration**: The backend now explicitly joins the **Customer's Profile** for single booking requests, ensuring the "Billed To" field correctly displays the Customer's name rather than the Rider's.
+- **Data Cleanup**: Streamlined the `normalizeBooking` function to provide consistent data structures for both the history list and the detailed receipt view.
 
-.env
-files based on these templates.
+## Files Modified
+- **Backend**: `src/routes/customer.js`
+- **Frontend**: `client/src/features/user/bookings/DigitalReceipt.jsx`
 
-Backend: In the herland-laundry-system-backend/ folder, create a file named
-
-.env
-and paste in the backend secrets (Supabase keys, Port, etc.) that Lance provides.
-Frontend: In the herland-laundry-system-frontend/client/ folder, create a file named
-
-.env
-and paste in the frontend secrets (Google Maps API key, etc.) that Lance provides.
-(Note: Do not commit your
-
-.env
-files. They are already in the
-
-.gitignore
-.)
-
-4. Start the Application Open a terminal in the root folder of the project (where the
-
-docker-compose.yml
-file is located) and run this command:
-
-bash
-docker compose up -d --build 5. Access the App It will take a minute or two to download the images and install dependencies the first time. Once it says the containers have started:
-
-The Frontend will be running at: http://localhost:5173/
-The Backend will be running at: http://localhost:5000/
-Note on Hot-Reloading: We have set up volume mounts, meaning if you make changes in your IDE (like VS Code), the changes will instantly reflect in the running containers! You do not need to restart Docker every time you edit a file.
-
-(Don't forget to securely send them the actual keys that belong in those
-
-.env
-files via Discord, Slack, etc.!)
+---
+*Documented by Antigravity AI on March 25, 2026*
