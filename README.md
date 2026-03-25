@@ -31,4 +31,4 @@ This branch encapsulates the overhaul of the Digital Receipt system, resolving c
 - **Frontend**: `client/src/features/user/bookings/DigitalReceipt.jsx`
 
 ---
-*Documented by Antigravity AI on March 25, 2026*
+*Documented on March 25, 2026*
