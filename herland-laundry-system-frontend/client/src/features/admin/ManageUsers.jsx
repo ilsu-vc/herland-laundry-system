@@ -41,7 +41,7 @@ export default function ManageUsers() {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const response = await fetch('http://localhost:5000/api/v1/admin/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/admin/users`, {
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
@@ -127,7 +127,7 @@ export default function ManageUsers() {
     try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const response = await fetch(`http://localhost:5000/api/v1/admin/users/${editingId}/role`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/admin/users/${editingId}/role`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -165,6 +165,11 @@ export default function ManageUsers() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'phone') {
+        const cleanValue = value.replace(/\D/g, '').slice(0, 11);
+        setEditData((prev) => ({ ...prev, [name]: cleanValue }));
+        return;
+    }
     setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -178,7 +183,7 @@ export default function ManageUsers() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const response = await fetch(`http://localhost:5000/api/v1/admin/users/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/admin/users/${id}`, {
         method: 'DELETE',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),

@@ -9,7 +9,7 @@ import BookingCalendar from "../../shared/components/BookingCalendar";
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from "@react-google-maps/api";
 import { useToast } from "../../shared/components/Toast";
 
-const mapLibraries = ["places", "geocoding"];
+import { GOOGLE_MAPS_LIBRARIES } from "../../shared/constants/maps";
 const defaultCenter = { lat: 14.537751, lng: 121.001379 }; // Pasay approximate
 
 /* =========================
@@ -51,11 +51,11 @@ export default function BookNow() {
     option: "dropOffPickUpLater",
     optionLabel: "Drop-off & Pick up later",
     date: "",
-    time: "09:00",
+    time: "",
   });
   const [deliveryInfo, setDeliveryInfo] = useState({
     date: "",
-    time: "09:00",
+    time: "",
   });
   const [customerLocation, setCustomerLocation] = useState({
     address: "",
@@ -67,7 +67,7 @@ export default function BookNow() {
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "").trim(),
-    libraries: mapLibraries,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Fetch available services and add-ons from backend
@@ -75,7 +75,7 @@ export default function BookNow() {
     const fetchMetadata = async () => {
       try {
         setLoadingServices(true);
-        const response = await fetch("http://localhost:5000/api/v1/customer/services");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/services`);
         if (response.ok) {
           const data = await response.json();
           setAvailableServices(data.services || []);
@@ -107,7 +107,7 @@ export default function BookNow() {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
-            const response = await fetch("http://localhost:5000/api/v1/customer/profile", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/profile`, {
               headers: { Authorization: `Bearer ${session.access_token}` },
             });
             if (response.ok) {
@@ -135,7 +135,7 @@ export default function BookNow() {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           const token = session?.access_token;
-          const response = await fetch(`http://localhost:5000/api/v1/customer/my-bookings/${editId}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/my-bookings/${editId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (response.ok) {
@@ -233,11 +233,16 @@ export default function BookNow() {
   const handleStepChange = (newStep) => {
     // Check if moving to step 3 (Address) and request location permission
     if (newStep === 3) {
-      requestLocationPermission((granted) => {
-        if (granted) {
-          setStep(newStep);
+      requestLocationPermission((granted, coords) => {
+        if (granted && coords) {
+          setCustomerLocation(prev => ({
+            ...prev,
+            lat: coords.lat,
+            lng: coords.lng
+          }));
         }
-        // If not granted, just don't navigate to step 3
+        // Always navigate to Step 3 so users can manually type their address if they deny GPS
+        setStep(newStep);
       });
     } else {
       setStep(newStep);
@@ -337,8 +342,30 @@ export default function BookNow() {
         {step === 3 && (
           <StepAddress
             onBack={() => setStep(2)}
-            onNext={(location) => {
+            onNext={async (location) => {
               if (location) setCustomerLocation(location);
+              
+              if (saveHomeAddress && location) {
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (session) {
+                    await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/profile`, {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({
+                        address: location.address,
+                        lat: location.lat,
+                        lng: location.lng,
+                      }),
+                    });
+                  }
+                } catch (err) {
+                  console.error("Failed to save home address:", err);
+                }
+              }
               setStep(4);
             }}
             isMapLoaded={isMapLoaded}
@@ -522,6 +549,32 @@ function StepSelectServices({
           />
         </div>
 
+        {/* Weight & Price Guide */}
+        <div className="lg:col-span-2 grid gap-3">
+          <div className="text-xs text-[#3878c2] bg-[#f0f6ff] p-3 rounded-lg border border-[#3878c2]/20">
+            <p className="font-semibold mb-1">💡 Weight Guide</p>
+            <p>Each load/service covers up to <strong>7.5 kgs</strong> of laundry. For heavier loads, please select additional services or contact us for assistance.</p>
+          </div>
+          
+          <div className="text-xs text-[#3878c2] bg-white p-3 rounded-lg border border-[#3878c2]">
+            <p className="font-semibold mb-2">💰 Quick Price Guide</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              {availableServices.map(s => (
+                <div key={s.id} className="flex justify-between border-b border-gray-100 pb-1">
+                  <span>{s.name}</span>
+                  <span className="font-bold">₱{s.currentPrice.toFixed(0)}</span>
+                </div>
+              ))}
+              {availableAddons.map(a => (
+                <div key={a.id} className="flex justify-between border-b border-gray-100 pb-1">
+                  <span>{a.name} (Add-on)</span>
+                  <span className="font-bold">₱{a.currentPrice.toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Bag Description */}
         <div className="lg:col-span-1 border rounded-lg p-3 bg-white border-[#3878c2]">
            <label className="block text-xs font-semibold text-[#3878c2] mb-1">Description of bag(s)</label>
@@ -553,7 +606,7 @@ function StepSelectServices({
       {/* Next Button */}
       <button
         onClick={handleNextSubmit}
-        className="mt-8 mx-auto block w-40 py-2 rounded text-white font-semibold"
+        className="mt-8 mx-auto xl:mr-0 xl:ml-auto block w-40 md:w-48 xl:w-52 py-2 md:py-3 xl:py-2.5 rounded-lg text-white font-bold text-base md:text-lg xl:text-base cursor-pointer hover:bg-[#3f9136] transition-all shadow-md active:scale-95"
         style={{ backgroundColor: "#4bad40" }}
       >
         Next
@@ -728,21 +781,22 @@ function StepCollection({
   // Autofill texts based on selected option
   const autofill = {
     dropOffPickUpLater: {
-      collection: "This is the date and time my laundry will get picked-up",
-      delivery: "This is the date and time my laundry will get picked-up",
+      collection: "I will drop off my laundry at the shop on this schedule.",
+      delivery: "I will pick up my clean laundry from the shop on this schedule.",
     },
     dropOffDelivered: {
-      collection: "This is the date and time my laundry will get picked-up",
-      delivery: "This is the date and time my laundry will get picked-up",
+      collection: "I will drop off my laundry at the shop on this schedule.",
+      delivery: "The rider will deliver my clean laundry to my home on this schedule.",
     },
     pickedUpDelivered: {
-      collection: "This is the date and time my laundry will get picked-up",
-      delivery: "This is the date and time my laundry will get picked-up",
+      collection: "The rider will pick up my laundry from my home on this schedule.",
+      delivery: "The rider will deliver my clean laundry to my home on this schedule.",
     },
   };
 
   const [isValidTime, setIsValidTime] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     if (!collectionInfo.date || !collectionInfo.time || !deliveryInfo.date || !deliveryInfo.time) {
@@ -777,8 +831,9 @@ function StepCollection({
   }, [collectionInfo.date, collectionInfo.time, deliveryInfo.date, deliveryInfo.time, totalEstimatedHours]);
 
   const handleNextSubmit = () => {
+    setShowErrors(true);
     if (!isValidTime) {
-        showToast(errorMessage, "error");
+      showToast(errorMessage, "error");
       return;
     }
     onNext();
@@ -796,7 +851,7 @@ function StepCollection({
         )}
       </div>
 
-      {!isValidTime && (
+      {!isValidTime && showErrors && (
         <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-pulse">
            ⚠️ {errorMessage}
         </div>
@@ -850,7 +905,7 @@ function StepCollection({
         {/* Collection Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#3878c2]">Collection Schedule</h3>
+            <h3 className="font-semibold text-[#3878c2]">Scheduled Pickup</h3>
             <div className="text-[10px] bg-white border border-[#3878c2] px-2 py-1 rounded-full">
               {collectionInfo.date ? formatDate(collectionInfo.date) : 'No date'} @ {collectionInfo.time ? formatTime(collectionInfo.time) : 'No time'}
             </div>
@@ -876,7 +931,7 @@ function StepCollection({
         {/* Delivery Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#3878c2]">Delivery Schedule</h3>
+            <h3 className="font-semibold text-[#3878c2]">Scheduled Drop-Off</h3>
             <div className="text-[10px] bg-white border border-[#3878c2] px-2 py-1 rounded-full">
               {deliveryInfo.date ? formatDate(deliveryInfo.date) : 'No date'} @ {deliveryInfo.time ? formatTime(deliveryInfo.time) : 'No time'}
             </div>
@@ -910,7 +965,7 @@ function StepCollection({
         </button>
         <button
           onClick={handleNextSubmit}
-          className={`px-4 py-2 rounded text-white ${isValidTime ? 'bg-[#4bad40]' : 'bg-gray-400 cursor-not-allowed'}`}
+          className={`px-4 py-2 rounded text-white transition-colors ${isValidTime ? 'bg-[#4bad40]' : 'bg-gray-400'}`}
         >
           Next
         </button>
@@ -1248,15 +1303,34 @@ function StepReview({
             {availableServices.filter(s => services[s.name.toLowerCase()]).length === 0 && <li>None</li>}
           </ul>
 
-          <h4 className="font-semibold mt-4 mb-1">Price Breakdown</h4>
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span>Total Estimated:</span>
-              <span className="font-bold">₱{calculateTotal().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-[#4bad40]">
-              <span>25% Downpayment:</span>
-              <span className="font-bold">₱{calculateDownpayment().toFixed(2)}</span>
+          <h4 className="font-semibold mt-4 mb-2">Price Breakdown</h4>
+          <div className="text-sm space-y-2 bg-gray-50 p-3 rounded border border-gray-100">
+            {/* Base Services */}
+            {availableServices.filter(s => services[s.name.toLowerCase()]).map(s => (
+              <div key={`breakdown-${s.id}`} className="flex justify-between text-[#374151]">
+                <span>
+                  {s.name} <span className="text-xs text-[#b4b4b4] ml-1">(₱{s.currentPrice.toFixed(2)} x {numberOfBags || 1} loads)</span>
+                </span>
+                <span className="font-medium">₱{(s.currentPrice * (Number(numberOfBags) || 1)).toFixed(2)}</span>
+              </div>
+            ))}
+            {availableServices.filter(s => services[s.name.toLowerCase()]).length === 0 && (
+              <div className="text-sm text-gray-500">No services selected</div>
+            )}
+
+            {/* Add-Ons */}
+            {availableAddons.filter(a => Number(addons[a.name.toLowerCase()]) > 0).map(a => (
+              <div key={`breakdown-addon-${a.id}`} className="flex justify-between text-[#374151]">
+                <span>
+                  {a.name} <span className="text-xs text-[#b4b4b4] ml-1">(₱{a.currentPrice.toFixed(2)} x {addons[a.name.toLowerCase()]} pcs)</span>
+                </span>
+                <span className="font-medium">₱{(a.currentPrice * Number(addons[a.name.toLowerCase()])).toFixed(2)}</span>
+              </div>
+            ))}
+
+            <div className="border-t border-[#b4b4b4]/30 my-2 pt-2 flex justify-between text-[#4bad40]">
+              <span className="font-semibold">Total Amount To Pay:</span>
+              <span className="font-bold text-base">₱{calculateTotal().toFixed(2)}</span>
             </div>
           </div>
 
@@ -1302,7 +1376,7 @@ function StepReview({
           {/* Collection */}
           <div className="mb-3">
             <div className="text-s font-semibold text-[#3878c2] mb-1">
-              Collection
+              Pickup
             </div>
             <div className="flex items-center gap-2 mb-1 text-sm">
               <CalendarIcon />
@@ -1319,7 +1393,7 @@ function StepReview({
           {/* Delivery */}
           <div className="mb-3">
             <div className="text-s font-semibold text-[#3878c2] mb-1">
-              Delivery
+              Drop-Off
             </div>
             <div className="flex items-center gap-2 mb-1 text-sm">
               <CalendarIcon />
@@ -1413,9 +1487,9 @@ function StepReview({
                 referenceNumber: paymentMethod === "gcash" ? "" : "-",
                 status: paymentMethod === "gcash" ? "For confirmation" : "Pay on collection",
                 totalAmount: calculateTotal(),
-                downpaymentRequired: calculateDownpayment(),
-                amountToPay: calculateDownpayment(), // For GCash initial payment
-                balance: calculateTotal() - calculateDownpayment(),
+                downpaymentRequired: 0,
+                amountToPay: calculateTotal(), // Full payment via GCash
+                balance: 0,
               },
               notes: notes || "",
             };
@@ -1425,8 +1499,8 @@ function StepReview({
               const token = session?.access_token;
 
               const url = isEditMode 
-                ? `http://localhost:5000/api/v1/customer/my-bookings/${editId}/update` 
-                : "http://localhost:5000/api/v1/customer/book";
+                ? `${import.meta.env.VITE_API_URL}/api/v1/customer/my-bookings/${editId}/update` 
+                : `${import.meta.env.VITE_API_URL}/api/v1/customer/book`;
               
               const method = isEditMode ? "PATCH" : "POST";
 
@@ -1452,7 +1526,7 @@ function StepReview({
                 // If non-edit mode and user wants to save their address, store it in their profile
                 if (saveHomeAddress && customerLocation?.lat) {
                   try {
-                    await fetch("http://localhost:5000/api/v1/customer/profile", {
+                    await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/profile`, {
                       method: "PUT",
                       headers: {
                         "Content-Type": "application/json",
@@ -1556,8 +1630,8 @@ function StepReview({
                      state: {
                        bookingReference: referenceNumber,
                        paymentReference,
-                       amountToPay: calculateDownpayment(), 
-                       isDownpayment: true,
+                       amountToPay: calculateTotal(), 
+                       isDownpayment: false,
                      },
                    });
                    return;

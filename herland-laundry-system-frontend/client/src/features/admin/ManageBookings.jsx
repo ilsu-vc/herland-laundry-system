@@ -18,107 +18,69 @@ import { supabase } from '../../lib/supabase';
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { useConfirm } from "../../shared/components/ConfirmationModal";
 
-const mapLibraries = ["places"];
+import { GOOGLE_MAPS_LIBRARIES } from "../../shared/constants/maps";
 
-const API_BASE = 'http://localhost:5000/api/v1/admin';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/admin`;
 
-const SHIPPING_ACTION_BY_OPTION = {
-  dropOffPickUpLater: "Mark Ready for Pickup",
-  dropOffDelivered: "Dispatch Booking",
-  pickedUpDelivered: "Dispatch Booking",
-};
+
 
 const STAGE_ACTIONS = {
-  received: ["Accept Booking", "Edit Booking", "Cancel Booking"],
+  received: ["Accept Booking", "Cancel Booking"],
   payment: ["Confirm Payment", "Flag Payment"],
+  pickup: ["Dispatch Rider for Pickup"],  // Only for pickedUpDelivered
   preparation: ["Start Laundry"],
-  shipping: [],
+  shipping: [],  // Buttons are determined dynamically by collection option
   final: ["Complete Booking"],
   done: [],
 };
 
 const ACTION_EFFECTS = {
-  "Accept Booking": { status: "Booking Accepted", nextStage: "payment" },
-  "Edit Booking": { status: "Booking Edited", nextStage: "payment" },
-  "Cancel Booking": { status: "Booking Cancelled", nextStage: "done" },
-  "Dispatch for Pickup": { status: "Ready for Pickup from Customer", nextStage: "payment" },
-  "Confirm Payment": { status: "Payment Confirmed", nextStage: "preparation" },
-  "Flag Payment": { status: "Payment Flagged", nextStage: "done" },
-  "Start Laundry": { status: "In Progress", nextStage: "shipping" },
-  "Mark Ready for Pickup": { status: "Ready for Pick-up", nextStage: "final" },
-  "Dispatch Booking": { status: "Out for Delivery", nextStage: "final" },
-  "Complete Booking": { status: "Booking Completed", nextStage: "done" },
+  "Accept Booking":              { status: "Booking Accepted",          nextStage: "payment" },
+  "Cancel Booking":              { status: "Booking Cancelled",         nextStage: "done" },
+  "Confirm Payment":             { status: "Payment Confirmed",         nextStage: "__dynamic__" }, // resolved below
+  "Flag Payment":                { status: "Payment Flagged",           nextStage: "done" },
+  "Dispatch Rider for Pickup":   { status: "Rider Dispatched for Pickup", nextStage: "preparation" },
+  "Start Laundry":               { status: "In Progress",               nextStage: "shipping" },
+  "Dispatch Rider for Delivery": { status: "Out for Delivery",          nextStage: "final" },
+  "Mark Ready for Pickup":       { status: "Ready for Pick-up",         nextStage: "final" },
+  "Complete Booking":            { status: "Booking Completed",         nextStage: "done" },
 };
 
 const STAGE_BY_STATUS = {
-  "Booking Received": "received",
-  "Booking Accepted": "payment",
-  "Booking Edited": "payment",
-  "Ready for Pickup from Customer": "payment",
-  "Payment Confirmed": "preparation",
-  "Payment Flagged": "done",
-  "In Progress": "shipping",
-  "Ready for Pick-up": "final",
-  "Out for Delivery": "final",
-  "Booking Completed": "done",
-  "Booking Cancelled": "done",
+  "Booking Received":              "received",
+  "Booking Accepted":              "payment",
+  "Booking Edited":                "payment",
+  "Payment Confirmed":             "preparation", // fallback; for pickedUpDelivered it will be "pickup"
+  "Payment Flagged":               "done",
+  "Rider Dispatched for Pickup":   "preparation",
+  "Picked Up from Customer":       "preparation",
+  "In Progress":                   "shipping",
+  "Ready for Pick-up":             "final",
+  "Out for Delivery":              "final",
+  "Booking Completed":             "done",
+  "Booking Cancelled":             "done",
 };
 
 const RED_BUTTONS = ["Cancel Booking", "Flag Payment"];
 
-const now = new Date().toISOString();
+const getButtonsForBooking = (booking) => {
+  // At the shipping stage, button depends on collection option
+  if (booking.stage === "shipping") {
+    const option = booking.collectionOption || "dropOffPickUpLater";
+    if (option === "dropOffPickUpLater") return ["Mark Ready for Pickup"];
+    return ["Dispatch Rider for Delivery"]; // dropOffDelivered or pickedUpDelivered
+  }
 
-const initialBookings = [
-  {
-    id: "REF-20260215-001",
-    customerName: "Juan Dela Cruz",
-    date: "Feb 12, 2026",
-    collectionOption: "dropOffPickUpLater",
-    stage: "received",
-    timeline: [{ status: "Booking Received", timestamp: now }],
-    createdAt: now,
-  },
-  {
-    id: "REF-20260215-002",
-    customerName: "Maria Santos",
-    date: "Feb 13, 2026",
-    collectionOption: "dropOffDelivered",
-    stage: "shipping",
-    timeline: [
-      { status: "Booking Received", timestamp: now },
-      { status: "Booking Accepted", timestamp: now },
-      { status: "Payment Confirmed", timestamp: now },
-      { status: "In Progress", timestamp: now },
-    ],
-    createdAt: now,
-  },
-];
+  // At the pickup stage, only pickedUpDelivered bookings land here
+  if (booking.stage === "pickup") {
+    return ["Dispatch Rider for Pickup"];
+  }
+
+  return [...(STAGE_ACTIONS[booking.stage] || [])];
+};
 
 const getCurrentStatus = (booking) =>
   booking.timeline[booking.timeline.length - 1]?.status || "Booking Received";
-
-const getShippingButtons = (booking) => {
-  const option = booking.collectionOption || (booking.isDelivery ? "dropOffDelivered" : "dropOffPickUpLater");
-  const action = SHIPPING_ACTION_BY_OPTION[option];
-  return action ? [action] : [];
-};
-
-const getButtonsForBooking = (booking) => {
-  if (booking.stage === "shipping") return getShippingButtons(booking);
-  
-  const buttons = [...(STAGE_ACTIONS[booking.stage] || [])];
-  
-  // Inject "Dispatch for Pickup" if it's an early stage, pickup is required, and hasn't been dispatched
-  const earlyStages = ["received", "payment", "preparation"];
-  if (earlyStages.includes(booking.stage) && booking.collectionOption === "pickedUpDelivered") {
-    const hasDispatched = booking.timeline.some(t => t.status === "Ready for Pickup from Customer");
-    if (!hasDispatched) {
-      buttons.unshift("Dispatch for Pickup");
-    }
-  }
-
-  return buttons;
-};
 
 const toTitleCase = (value = "") =>
   value
@@ -190,6 +152,9 @@ const getCollectionDetails = (booking) => ({
   deliveryTime: booking.collectionDetails?.deliveryTime || "",
   lat: booking.collectionDetails?.lat || null,
   lng: booking.collectionDetails?.lng || null,
+  pickupAddress: booking.collectionDetails?.pickupAddress || "",
+  deliveryAddress: booking.collectionDetails?.deliveryAddress || "",
+  customerAddress: booking.collectionDetails?.customerAddress || "",
 });
 
 const getPaymentDetails = (booking) => {
@@ -235,7 +200,7 @@ function getMonthYear(dateString) {
 export default function ManageBookings() {
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const [bookings, setBookings] = useState(() => [...initialBookings]);
+  const [bookings, setBookings] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all"); // New state
   const [selectedMonth, setSelectedMonth] = useState("All Time");
@@ -253,7 +218,7 @@ export default function ManageBookings() {
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "").trim(),
-    libraries: mapLibraries,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Fetch bookings from the database via backend API
@@ -272,19 +237,14 @@ export default function ManageBookings() {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.length > 0) {
-          setBookings(data);
-        }
-        // If API returns empty, keep initialBookings as fallback
+        setBookings(data);
       } else {
         console.error('Failed to fetch bookings from backend');
-        setFetchError('Could not load bookings from the server. Showing local data.');
-        // Keep initialBookings as fallback
+        setFetchError('Could not load bookings from the server. Please refresh and try again.');
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      setFetchError('Could not connect to the server. Showing local data.');
-      // Keep initialBookings as fallback
+      setFetchError('Could not connect to the server. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
@@ -321,13 +281,22 @@ export default function ManageBookings() {
     const effect = ACTION_EFFECTS[actionLabel];
     if (!effect) return;
 
+    const currentBooking = bookings.find((booking) => booking.id === bookingId);
+
     if (actionLabel === "Confirm Payment") {
-      const targetBooking = bookings.find((booking) => booking.id === bookingId);
-      if (!canConfirmPaymentForBooking(targetBooking)) return;
+      if (!canConfirmPaymentForBooking(currentBooking)) return;
+    }
+
+    // Resolve dynamic nextStage for "Confirm Payment"
+    // pickedUpDelivered needs a pickup leg before laundry starts
+    let resolvedNextStage = effect.nextStage;
+    if (resolvedNextStage === "__dynamic__") {
+      resolvedNextStage = currentBooking?.collectionOption === "pickedUpDelivered"
+        ? "pickup"
+        : "preparation";
     }
 
     // Build the updated timeline for the API call
-    const currentBooking = bookings.find((booking) => booking.id === bookingId);
     const updatedTimeline = [
       ...(currentBooking?.timeline || []),
       { status: effect.status, timestamp: new Date().toISOString() },
@@ -353,7 +322,7 @@ export default function ManageBookings() {
         return {
           ...booking,
           timeline: updatedTimeline,
-          stage: effect.nextStage,
+          stage: resolvedNextStage,
           paymentDetails: nextPaymentDetails,
         };
       })
@@ -373,7 +342,7 @@ export default function ManageBookings() {
         },
         body: JSON.stringify({
           status: effect.status,
-          nextStage: effect.nextStage,
+          nextStage: resolvedNextStage,
           timeline: updatedTimeline,
         }),
       });
@@ -807,20 +776,34 @@ export default function ManageBookings() {
                       <p className="text-xs font-semibold text-[#3878c2]">Collection Mode</p>
                       <p className="mt-1 text-sm text-[#374151]">{collectionDetails.mode}</p>
                     </div>
+                    {selectedBooking.riderName && (
+                      <div>
+                        <p className="text-xs font-semibold text-[#4bad40]">Assigned Rider</p>
+                        <p className="mt-1 text-sm font-bold text-[#4bad40]">{selectedBooking.riderName}</p>
+                      </div>
+                    )}
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-semibold text-[#3878c2]">Pickup Address</p>
+                      <p className="mt-1 text-sm text-[#374151]">{collectionDetails.pickupAddress || "-"}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-semibold text-[#3878c2]">Delivery Address</p>
+                      <p className="mt-1 text-sm text-[#374151]">{collectionDetails.deliveryAddress || "-"}</p>
+                    </div>
                     {collectionDetails.customerAddress && (
                       <div className="md:col-span-2 rounded-lg bg-gray-50 border border-gray-100 p-3 mt-1">
-                        <p className="text-xs font-semibold text-[#b4b4b4] uppercase">Home / Pinned Address</p>
+                        <p className="text-xs font-semibold text-[#b4b4b4] uppercase">Pinned Address (Geo-Map)</p>
                         <p className="mt-1 text-sm text-[#374151] font-medium">{collectionDetails.customerAddress}</p>
                       </div>
                     )}
                     <div>
-                      <p className="text-xs font-semibold text-[#3878c2]">Collection Schedule</p>
+                      <p className="text-xs font-semibold text-[#3878c2]">Scheduled Pickup</p>
                       <p className="mt-1 text-sm text-[#374151]">
                         {formatDateForDisplay(collectionDetails.collectionDate)} • {formatTimeForDisplay(collectionDetails.collectionTime)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[#3878c2]">Delivery Schedule</p>
+                      <p className="text-xs font-semibold text-[#3878c2]">Scheduled Drop-Off</p>
                       <p className="mt-1 text-sm text-[#374151]">
                         {formatDateForDisplay(collectionDetails.deliveryDate)} • {formatTimeForDisplay(collectionDetails.deliveryTime)}
                       </p>

@@ -112,7 +112,7 @@ export default function LandingPage() {
     const fetchRates = async () => {
       try {
         setLoadingRates(true);
-        const response = await fetch('http://localhost:5000/api/v1/customer/services');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/services`);
         if (response.ok) {
           const data = await response.json();
           // Transform fetched services and addons into categories
@@ -226,14 +226,9 @@ export default function LandingPage() {
               <div
                 key={category.name}
                 className={`h-fit self-start rounded-xl border border-[#3878c2] p-5 transition-all ${
-                  isWideDesktop || openRate === index ? 'bg-[#63bce6]/10' : ''
+                  openRate === index ? 'bg-[#63bce6]/10' : ''
                 }`}
               >
-                {isWideDesktop ? (
-                  <div className="text-[#3878c2] font-semibold text-lg">
-                    {category.name}
-                  </div>
-                ) : (
                   <button
                     onClick={() =>
                       setOpenRate(openRate === index ? null : index)
@@ -249,9 +244,8 @@ export default function LandingPage() {
                       ▼
                     </span>
                   </button>
-                )}
 
-                {(isWideDesktop || openRate === index) && (
+                {openRate === index && (
                   <>
                     <hr className="my-4 border-[#3878c2]" />
 
@@ -301,14 +295,9 @@ export default function LandingPage() {
             <div
               key={faq.id}
               className={`h-fit self-start rounded-xl border border-[#3878c2] p-4 transition-all ${
-                isWideDesktop || openFaq === index ? 'bg-[#63bce6]/10' : ''
+                openFaq === index ? 'bg-[#63bce6]/10' : ''
               }`}
             >
-              {isWideDesktop ? (
-                <div className="w-full text-left text-[#3878c2] font-semibold text-sm sm:text-base md:text-lg">
-                  {faq.question}
-                </div>
-              ) : (
                 <button
                   onClick={() =>
                     setOpenFaq(openFaq === index ? null : index)
@@ -324,9 +313,8 @@ export default function LandingPage() {
                     ▼
                   </span>
                 </button>
-              )}
 
-              {(isWideDesktop || openFaq === index) && (
+              {openFaq === index && (
                 <>
                   <hr className="my-4 border-[#3878c2]" />
                   <p className="text-[#3878c2] text-justify">

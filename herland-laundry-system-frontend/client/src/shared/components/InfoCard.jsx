@@ -21,7 +21,7 @@ export default function InfoCard({
   const isBluePanel = panelVariant === 'blue';
 
   return (
-    <div className="w-full rounded-2xl border border-[#3878c2] bg-white shadow-sm overflow-hidden transition hover:shadow-lg hover:scale-[1.01] flex">
+    <div className="w-full h-fit rounded-2xl border border-[#3878c2] bg-white shadow-sm overflow-hidden transition hover:shadow-lg hover:scale-[1.01] flex">
       <div className={`flex items-center justify-center w-16 shrink-0 ${isBluePanel ? 'bg-[#63bce6]' : 'bg-white'}`}>
         <svg
           xmlns="http://www.w3.org/2000/svg"

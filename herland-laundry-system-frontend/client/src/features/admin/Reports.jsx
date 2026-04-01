@@ -19,7 +19,7 @@ import BottomNavbar from '../../shared/navigation/BottomNavbar';
 import { FilterSelect } from '../../shared/components/OptionInput';
 import { supabase } from '../../lib/supabase';
 
-const API_BASE = 'http://localhost:5000/api/v1/admin';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/admin`;
 const CHART_COLORS = ['#3878c2', '#63bce6', '#4bad40', '#f59e0b', '#ef4444', '#8b5cf6'];
 const CHART_TYPE_LABELS = {
   bar: 'Bar Graph',

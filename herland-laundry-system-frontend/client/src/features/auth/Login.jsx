@@ -83,139 +83,150 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-9rem)] overflow-hidden flex items-center justify-center bg-white px-4 md:px-6">
-      <div className="w-full max-w-md md:max-w-lg">
-        <div className="md:rounded-2xl md:border md:border-[#e6eef8] md:bg-white md:px-10 md:py-10 md:shadow-sm">
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Left side: Hero Image */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-[#1a232e]">
+        <img
+          src="https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=1200&q=80"
+          alt="Laundry"
+          className="absolute inset-0 h-full w-full object-cover opacity-60"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1a232e] to-transparent opacity-80" />
+        <div className="relative z-10 flex flex-col justify-end p-16 h-full">
+          <img src="/images/SecondaryLogo.png" alt="Herland" className="h-12 w-auto mb-8 bg-white/10 p-2 rounded-xl backdrop-blur-sm self-start" />
+          <h1 className="text-4xl xl:text-5xl font-black text-white mb-4 leading-tight">Fresh Clothes,<br/>Less Hassle.</h1>
+          <p className="text-lg text-gray-300 max-w-md bg-black/20 p-4 rounded-xl backdrop-blur-sm border border-white/10">
+            Log in to manage your bookings, schedule pickups, and experience the easiest laundry service in town.
+          </p>
+        </div>
+      </div>
 
-          {/* Logo */}
-          <img
-            src="/images/PrimaryLogo.png"
-            alt="Herland Laundry"
-            className="mx-auto mb-3 w-52 sm:w-56 h-auto"
-          />
-
-          {/* Welcome */}
-          <h1 className="text-center text-lg font-semibold text-[#3878c2] mb-6 sm:text-xl">
-            Welcome to Herland Laundry!
-          </h1>
-
-          {/* Toggle Buttons */}
-          <div className="flex mb-4 overflow-hidden rounded">
-            <button
-              type="button"
-              onClick={() => { setMode('mobile'); setValue(''); setError(''); }}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                mode === 'mobile'
-                  ? 'bg-[#4bad40] text-white'
-                  : 'bg-[#b4b4b4] text-white'
-              }`}
-            >
-              Mobile Number
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('email'); setValue(''); setError(''); }}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                mode === 'email'
-                  ? 'bg-[#4bad40] text-white'
-                  : 'bg-[#b4b4b4] text-white'
-              }`}
-            >
-              Email Address
-            </button>
+      {/* Right side: Form shrink adjustments */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12 xl:p-20 relative overflow-y-auto">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center lg:text-left">
+            <img src="/images/PrimaryLogo.png" alt="Herland Laundry" className="h-14 w-auto mx-auto lg:mx-0 mb-4 lg:hidden" />
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Welcome back</h2>
+            <p className="mt-2 text-sm text-gray-500 font-medium">Please enter your credentials to sign in.</p>
           </div>
 
-          {/* Helper Text */}
-          <p className="text-center text-sm text-[#3878c2] mb-4">
-            {mode === 'mobile'
-              ? 'Use your mobile number to login'
-              : 'Use your email address to login'}
-          </p>
+          <div className="bg-white p-5 sm:p-7 rounded-2xl shadow-xl shadow-gray-200/50 ring-1 ring-gray-100">
+            {/* Toggle Buttons */}
+            <div className="flex mb-6 p-1 bg-gray-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => { setMode('mobile'); setValue(''); setError(''); }}
+                className={`flex-1 py-2 sm:py-2.5 text-sm font-bold rounded-lg transition-all duration-200 ${
+                  mode === 'mobile'
+                    ? 'bg-white text-[#3878c2] shadow-sm ring-1 ring-gray-200'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Mobile Number
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('email'); setValue(''); setError(''); }}
+                className={`flex-1 py-2 sm:py-2.5 text-sm font-bold rounded-lg transition-all duration-200 ${
+                  mode === 'email'
+                    ? 'bg-white text-[#3878c2] shadow-sm ring-1 ring-gray-200'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Email Address
+              </button>
+            </div>
 
-          {/* Input Form */}
-          <form onSubmit={handleSubmit}>
-            {/* Identifier input */}
-            <div className="flex items-center border border-[#3878c2] rounded px-3 py-2 mb-3">
-              {mode === 'mobile' && (
-                <div className="flex items-center mr-3">
-                  <span className="text-[#3878c2] text-sm font-semibold select-none">
-                    +63
-                  </span>
-                  <span className="mx-2 h-5 w-px bg-[#3878c2]" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Identifier */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  {mode === 'mobile' ? 'Mobile Number' : 'Email Address'}
+                </label>
+                <div className={`flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 sm:py-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#3878c2]/50 focus-within:border-[#3878c2] transition-all ${warning ? 'border-red-300 ring-4 ring-red-50 bg-red-50/50' : ''}`}>
+                  {mode === 'mobile' && (
+                    <div className="flex items-center text-[#3878c2] font-bold mr-3 pr-3 border-r border-gray-300">
+                      +63
+                    </div>
+                  )}
+                  <input
+                    type={mode === 'mobile' ? 'tel' : 'email'}
+                    value={value}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (mode === 'mobile') {
+                        val = val.replace(/\D/g, '');
+                        if (val.length > 10) val = val.slice(0, 10);
+                      }
+                      setValue(val);
+                    }}
+                    placeholder={mode === 'mobile' ? '912 345 6789' : 'name@example.com'}
+                    className="w-full bg-transparent outline-none text-gray-900 font-medium placeholder-gray-400"
+                  />
+                </div>
+                {warning && <p className="mt-2 text-xs font-medium text-red-500">{warning}</p>}
+              </div>
+
+              {/* Password */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Password
+                    </label>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/forgot-password')}
+                        className="text-xs font-bold text-[#3878c2] hover:text-[#2a5d99] hover:underline transition-colors"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
+                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 sm:py-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#3878c2]/50 focus-within:border-[#3878c2] transition-all">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-transparent outline-none text-gray-900 font-medium placeholder-gray-400 tracking-widest"
+                  />
+                </div>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                    <p className="text-xs sm:text-sm font-semibold text-red-600 text-center">{error}</p>
                 </div>
               )}
-              <input
-                type={mode === 'mobile' ? 'tel' : 'email'}
-                value={value}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  if (mode === 'mobile') {
-                    val = val.replace(/\D/g, '');
-                    if (val.length > 10) val = val.slice(0, 10);
-                  }
-                  setValue(val);
-                }}
-                placeholder={
-                  mode === 'mobile' ? 'Enter mobile number' : 'Enter email address'
-                }
-                className="w-full outline-none bg-transparent text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] placeholder:font-normal"
-              />
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={!!warning || !value || !password || loading}
+                className={`w-full py-3 sm:py-3.5 rounded-xl text-sm font-bold shadow-md transition-all duration-300 mt-2 ${
+                  !warning && value && password && !loading
+                    ? 'bg-[#4bad40] text-white hover:bg-[#3f9136] hover:shadow-[#4bad40]/30 hover:-translate-y-0.5'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                }`}
+              >
+                {loading ? 'Authenticating...' : 'Sign In'}
+              </button>
+            </form>
+
+            {/* Sign Up Link */}
+            <div className="mt-6 sm:mt-8 text-center border-t border-gray-100 pt-5 sm:pt-6">
+                <p className="text-sm font-medium text-gray-500">
+                    Don't have an account?{' '}
+                    <button
+                        type="button"
+                        onClick={() => navigate('/signup')}
+                        className="text-[#3878c2] font-bold hover:text-[#2a5d99] hover:underline transition-colors"
+                    >
+                        Create one now
+                    </button>
+                </p>
             </div>
-
-            {/* Warning for identifier */}
-            {warning && (
-              <p className="text-xs text-[#ff0000] mb-2">{warning}</p>
-            )}
-
-            {/* Password input */}
-            <div className="flex flex-col mb-4">
-              <div className="flex items-center border border-[#3878c2] rounded px-3 py-2">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="w-full outline-none bg-transparent text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] placeholder:font-normal"
-                />
-              </div>
-              <div className="flex justify-end mt-1">
-                <button
-                  type="button"
-                  onClick={() => navigate('/forgot-password')}
-                  className="text-xs font-semibold text-[#3878c2] hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-            </div>
-
-            {/* Auth error */}
-            {error && (
-              <p className="text-xs sm:text-sm text-[#ff0000] mb-3 text-center">{error}</p>
-            )}
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={!!warning || !value || !password || loading}
-              className={`w-full py-2 rounded text-sm font-semibold transition-colors mb-3 ${
-                !warning && value && password && !loading
-                  ? 'bg-[#4bad40] text-white hover:bg-[#45a338]'
-                  : 'bg-[#b4b4b4] text-white cursor-not-allowed'
-              }`}
-            >
-              {loading ? 'Logging in…' : 'Login'}
-            </button>
-
-            {/* Sign up link */}
-            <button
-              type="button"
-              onClick={() => navigate('/signup')}
-              className="w-full py-2 rounded text-sm font-semibold text-[#3878c2] border border-[#3878c2] hover:bg-[#f0f0f0] transition-colors"
-            >
-              Don't have an account? Sign Up
-            </button>
-          </form>
+          </div>
         </div>
       </div>
     </div>

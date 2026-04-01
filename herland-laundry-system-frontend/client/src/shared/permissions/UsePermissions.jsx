@@ -4,8 +4,8 @@ const PermissionsContext = createContext();
 
 export function PermissionsProvider({ children }) {
   // Always show for testing
-  const [showNotificationModal, setShowNotificationModal] = useState(true);
-  const [showLocationModal, setShowLocationModal] = useState(true);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationCallback, setLocationCallback] = useState(null);
 
   // Always trigger modal
@@ -29,17 +29,41 @@ export function PermissionsProvider({ children }) {
   };
 
   const handleAllowLocation = () => {
-    setShowLocationModal(false);
-    if (locationCallback) {
-      locationCallback(true);
-      setLocationCallback(null);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setShowLocationModal(false);
+          if (locationCallback) {
+            locationCallback(true, coords);
+            setLocationCallback(null);
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setShowLocationModal(false);
+          if (locationCallback) {
+            locationCallback(false, null);
+            setLocationCallback(null);
+          }
+        }
+      );
+    } else {
+      setShowLocationModal(false);
+      if (locationCallback) {
+        locationCallback(false, null);
+        setLocationCallback(null);
+      }
     }
   };
 
   const handleDenyLocation = () => {
     setShowLocationModal(false);
     if (locationCallback) {
-      locationCallback(false);
+      locationCallback(false, null);
       setLocationCallback(null);
     }
   };

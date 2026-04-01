@@ -4,7 +4,7 @@ import BottomNavbar from '../../shared/navigation/BottomNavbar';
 import { defaultFaqs } from '../../shared/constants/faqs';
 import { supabase } from '../../lib/supabase';
 
-const API_BASE = 'http://localhost:5000/api/v1/admin';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/admin`;
 
 const fallbackServices = [
   { id: 'wash', name: 'Wash', currentPrice: 60.0, previousPrice: null },

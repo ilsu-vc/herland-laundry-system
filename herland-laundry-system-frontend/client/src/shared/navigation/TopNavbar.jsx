@@ -104,7 +104,16 @@ export default function TopNavbar({
           {showBack ? (
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                const role = activeRole?.toLowerCase();
+                if (role === 'staff' || location.pathname.startsWith('/staff')) {
+                  navigate('/staff');
+                } else if (role === 'rider' || location.pathname.startsWith('/rider')) {
+                  navigate('/rider');
+                } else {
+                  navigate(-1);
+                }
+              }}
               className="btn btn-ghost btn-square"
               aria-label="Go back"
             >
@@ -144,7 +153,7 @@ export default function TopNavbar({
                 <button
                   type="button"
                   onClick={() => navigate('/')}
-                  className="btn btn-ghost px-0 shrink-0"
+                  className="btn btn-ghost px-0 shrink-0 mr-6 xl:mr-8 -ml-2 md:-ml-4"
                   aria-label="Go to landing page"
                 >
                   <img
@@ -160,14 +169,14 @@ export default function TopNavbar({
                   onMouseLeave={handleMouseLeave}
                   onMouseUp={handleMouseUp}
                   onMouseMove={handleMouseMove}
-                  className={`flex-1 flex items-center justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 px-4 overflow-x-auto scrollbar-hide flex-nowrap ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none active:cursor-grabbing`}
+                  className={`flex-1 flex items-center justify-start gap-x-2 sm:gap-x-4 md:gap-x-6 px-4 overflow-x-auto scrollbar-hide flex-nowrap ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none active:cursor-grabbing`}
                 >
                   {navItems.filter(item => (!item.requiresAuth || session) && (!item.requiresGuest || !session)).map((item) => (
                     <button
                       key={`${item.label}-${item.path}`}
                       type="button"
                       onClick={(e) => onNavItemClick(e, item)}
-                      className="btn btn-ghost text-[#3878c2] px-4 text-[15px] font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 shrink-0"
+                      className="btn btn-ghost text-[#3878c2] px-4 text-[15px] font-medium whitespace-nowrap transition-all duration-200 hover:scale-105 shrink-0 xl:first:ml-auto xl:last:mr-auto"
                     >
                       {item.label}
                     </button>

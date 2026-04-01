@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../../lib/supabase";
 import { formatDate, formatTime } from "../../../shared/utils/formatters";
 
-const API_BASE = "http://localhost:5000/api/v1/customer";
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/customer`;
 
 export default function DigitalReceipt() {
   const navigate = useNavigate();

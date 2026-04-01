@@ -158,14 +158,18 @@ app.post('/api/v1/bookings', requireAuth, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     // Logic for Notification Bin
-    await supabase.from('notifications').insert([{ user_id: userId, message: `New booking for ${serviceType} confirmed!` }]);
+    await supabase.from('notifications').insert([{ 
+        user_id: userId, 
+        title: 'Booking Confirmed', 
+        message: `New booking for ${serviceType} confirmed!` 
+    }]);
 
     res.status(201).json(data);
 });
 
 // 4. Notifications Fetch
-app.get('/api/v1/notifications/:userId', requireAuth, async (req, res) => {
-    const { userId } = req.params;
+app.get('/api/v1/notifications', requireAuth, async (req, res) => {
+    const userId = req.user.id;
     const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -174,6 +178,41 @@ app.get('/api/v1/notifications/:userId', requireAuth, async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
     res.status(200).json(data);
+});
+
+// 5. Mark Notification Read
+app.patch('/api/v1/notifications/:id/read', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id)
+        .eq('user_id', req.user.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json({ success: true });
+});
+
+// 6. Mark All Notifications Read
+app.patch('/api/v1/notifications/read-all', requireAuth, async (req, res) => {
+    const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', req.user.id)
+        .eq('read', false);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json({ success: true });
+});
+
+// 7. Delete Notification
+app.delete('/api/v1/notifications/:id', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', req.user.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json({ success: true });
 });
 
 app.listen(PORT, () => console.log(`🚀 Herland Backend running on http://localhost:${PORT}`));

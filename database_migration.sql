@@ -103,3 +103,17 @@ ON CONFLICT DO NOTHING;
 INSERT INTO shop_schedule (opens, closes) 
 VALUES ('08:00', '18:00')
 ON CONFLICT DO NOTHING;
+
+-- 7. Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own notifications" ON notifications;
+CREATE POLICY "Users can manage their own notifications" ON notifications FOR ALL USING (auth.uid() = user_id);

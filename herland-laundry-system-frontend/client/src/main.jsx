@@ -21,6 +21,9 @@ function AppShell() {
   const isPublicRoute = isLandingRoute || isLoginRoute || isSignupRoute || isRoleSwitcherRoute
   const { hideBottomNav } = useLayout()
 
+  const isManagerRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff')
+  const shouldHideBottomNav = hideBottomNav || isLoginRoute || isSignupRoute || isManagerRoute
+
   useEffect(() => {
     const syncSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -79,6 +82,9 @@ function AppShell() {
     } else if (location.pathname.startsWith('/admin')) {
       window.sessionStorage.setItem('activeRole', 'Admin')
     }
+
+    // Reset window scroll position to the top whenever the page changes
+    window.scrollTo(0, 0)
   }, [location.pathname])
 
   return (
@@ -92,7 +98,7 @@ function AppShell() {
           <AppRoutes />
         </div>
       </div>
-      {!hideBottomNav && (
+      {!shouldHideBottomNav && (
         <div className="lg:hidden">
           <BottomNavbar />
         </div>

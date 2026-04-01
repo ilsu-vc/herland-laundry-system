@@ -28,7 +28,7 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
   useEffect(() => {
     const fetchBookedSlots = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/v1/customer/booked-slots');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer/booked-slots`);
         if (response.ok) {
           const data = await response.json();
           setBookedSlots(data);

@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import VerticalStepper from "../../../shared/components/VerticalStepper";
 import { supabase } from "../../../lib/supabase";
-import { formatTime } from "../../../shared/utils/formatters";
+import { formatDate, formatTime } from "../../../shared/utils/formatters";
 import { useToast } from "../../../shared/components/Toast";
 import { useConfirm } from "../../../shared/components/ConfirmationModal";
 
-const API_BASE = "http://localhost:5000/api/v1/customer";
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/customer`;
 
 export default function BookingDetails() {
   const navigate = useNavigate();
@@ -141,7 +141,6 @@ export default function BookingDetails() {
     }
   };
 
-  // Derive timeline — if the booking has a delivery option, add the appropriate pending steps
   const buildFullTimeline = (bk) => {
     if (!bk) return [];
 
@@ -160,15 +159,23 @@ export default function BookingDetails() {
     const isDelivery =
       bk.collectionOption === "dropOffDelivered" ||
       bk.collectionOption === "pickedUpDelivered";
+    const isPickupRequired = bk.collectionOption === "pickedUpDelivered";
 
     const futureSteps = [
       "Booking Received",
       "Booking Accepted",
       "Payment Confirmed",
-      "In Progress",
-      isDelivery ? "Out for Delivery" : "Ready for Pick-up",
-      "Booking Completed",
     ];
+
+    // For pickedUpDelivered: rider picks up first, then laundry is processed
+    if (isPickupRequired) {
+      futureSteps.push("Rider Dispatched for Pickup");
+      futureSteps.push("Picked Up from Customer");
+    }
+
+    futureSteps.push("In Progress");
+    futureSteps.push(isDelivery ? "Out for Delivery" : "Ready for Pick-up");
+    futureSteps.push("Booking Completed");
 
     // Add any future steps that haven't been reached yet (with null timestamp)
     const result = [...timeline];
@@ -281,6 +288,14 @@ export default function BookingDetails() {
           <p className="text-xl font-bold break-all text-[#3878c2]">
             {referenceNumber}
           </p>
+          {booking?.riderName && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="size-2 rounded-full bg-[#4bad40] animate-pulse"></div>
+              <p className="text-sm font-semibold text-[#4bad40]">
+                Assigned Rider: <span className="font-bold">{booking.riderName}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mb-8 border-t border-[#f0f0f0]" />

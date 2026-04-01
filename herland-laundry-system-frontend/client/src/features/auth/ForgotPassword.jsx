@@ -127,7 +127,7 @@ export default function ForgotPassword() {
                   setValue(val);
                 }}
                 placeholder={mode === 'mobile' ? 'Enter mobile number' : 'Enter email address'}
-                className="w-full outline-none bg-transparent text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
+                className="w-full outline-none bg-white text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
               />
             </div>
 

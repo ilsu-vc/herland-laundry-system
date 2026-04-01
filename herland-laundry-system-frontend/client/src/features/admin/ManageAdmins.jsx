@@ -29,7 +29,7 @@ export default function ManageAdmins() {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const response = await fetch('http://localhost:5000/api/v1/admin/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/admin/users`, {
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
@@ -99,7 +99,7 @@ export default function ManageAdmins() {
      try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const response = await fetch(`http://localhost:5000/api/v1/admin/users/${editingId}/role`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/admin/users/${editingId}/role`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

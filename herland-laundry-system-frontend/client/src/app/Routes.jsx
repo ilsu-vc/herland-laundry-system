@@ -13,6 +13,7 @@ const DigitalReceipt = lazy(() => import('../features/user/bookings/DigitalRecei
 const LandingPage = lazy(() => import('../features/landing/LandingPage'))
 const Dashboard = lazy(() => import('../features/landing/Dashboard'))
 const RiderDashboard = lazy(() => import('../features/rider/RiderDashboard'))
+const ManageTasks = lazy(() => import('../features/rider/ManageTasks'))
 const StaffDashboard = lazy(() => import('../features/staff/StaffDashboard'))
 const AdminDashboard = lazy(() => import('../features/admin/AdminDashboard'))
 const ManageBookings = lazy(() => import('../features/admin/ManageBookings'))
@@ -48,7 +49,7 @@ function NotificationsRoleRedirect() {
 
 function resolveBookingsElementByRole() {
 	const activeRole = window.sessionStorage.getItem('activeRole')
-	if (activeRole === 'rider') return <RiderDashboard />
+	if (activeRole === 'rider') return <ManageTasks />
 	return <BookingHistory />
 }
 
@@ -62,7 +63,9 @@ export default function AppRoutes() {
 				<Route path="/guest" element={<LandingPage />} />
 				<Route path="/user" element={<Dashboard />} />
 				<Route path="/rider" element={<RiderDashboard />} />
+				<Route path="/rider/manage-tasks" element={<ManageTasks />} />
 				<Route path="/staff" element={<StaffDashboard />} />
+				<Route path="/staff/manage-bookings" element={<ManageBookings />} />
 				<Route path="/admin" element={<AdminDashboard />} />
 				<Route path="/admin/manage-bookings" element={<ManageBookings />} />
 				<Route path="/admin/manage-employees" element={<ManageEmployees />} />

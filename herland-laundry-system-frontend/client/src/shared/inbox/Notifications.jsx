@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { usePermissions } from "../permissions/UsePermissions";
+import { supabase } from "../../lib/supabase";
 
 const USER_NOTIFICATIONS = [
   {
@@ -102,25 +102,55 @@ const getRoleFromPath = (pathname = "") => {
 export default function Notifications() {
   const location = useLocation();
   const navigate = useNavigate();
-  const activeRole = useMemo(() => getRoleFromPath(location.pathname), [location.pathname]);
+  // We no longer manually pick role-based standard notifications,
+  // we fetch them fully from the backend for the current user.
   const [filter, setFilter] = useState("All");
-  const [notifications, setNotifications] = useState(() => ROLE_NOTIFICATIONS[activeRole]);
+  const [notifications, setNotifications] = useState([]);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { requestNotificationPermission } = usePermissions();
+  const [isLoading, setIsLoading] = useState(true);
 
   const pressTimer = useRef(null);
 
   useEffect(() => {
-    requestNotificationPermission();
-  }, [requestNotificationPermission]);
+    fetchNotifications();
+  }, []);
 
-  useEffect(() => {
-    setFilter("All");
-    setNotifications(ROLE_NOTIFICATIONS[activeRole]);
-    setSelectedNotification(null);
-    setIsModalOpen(false);
-  }, [activeRole]);
+  const fetchNotifications = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Fetch notifications safely from the secure endpoint without passing userId manually
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/notifications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Transform backend timestamp to readable time string
+        const mappedData = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          read: item.read,
+          time: new Date(item.created_at).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', hour12: true
+          })
+        }));
+        setNotifications(mappedData);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
@@ -132,14 +162,43 @@ export default function Notifications() {
     return notifications;
   }, [filter, notifications]);
 
-  const toggleRead = (id) => {
+  const toggleRead = async (id) => {
+    const item = notifications.find(n => n.id === id);
+    if (!item || item.read) return; // Only process if unread
+    
+    // Optimistic update
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      await fetch(`${import.meta.env.VITE_API_URL}/api/v1/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
   };
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      await fetch(`${import.meta.env.VITE_API_URL}/api/v1/notifications/read-all`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
   };
 
   const startPressTimer = (item) => {
@@ -153,10 +212,22 @@ export default function Notifications() {
     if (pressTimer.current) clearTimeout(pressTimer.current);
   };
 
-  const deleteNotification = (id) => {
+  const deleteNotification = async (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     setIsModalOpen(false);
     setSelectedNotification(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      await fetch(`${import.meta.env.VITE_API_URL}/api/v1/notifications/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+    }
   };
 
   const handleToggleRead = () => {
@@ -224,7 +295,11 @@ export default function Notifications() {
         </div>
 
         {/* Notifications List */}
-        {filteredNotifications.length === 0 ? (
+        {isLoading ? (
+          <div className="flex min-h-[60vh] flex-col items-center justify-center text-center space-y-4">
+             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3878c2]"></div>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center text-center space-y-6">
             <img
               src="/images/WashingMachine.png"
