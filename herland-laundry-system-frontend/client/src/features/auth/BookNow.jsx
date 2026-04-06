@@ -516,38 +516,38 @@ function StepSelectServices({
         ))}
       </div>
 
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-        {/* Add-Ons + No. of Bags - aligned side by side */}
-        <div className="lg:col-span-2 grid gap-4 md:grid-cols-2">
-          <div>
-            <h4 className="text-xs font-semibold text-[#b4b4b4] uppercase tracking-wider mb-2">Add-Ons</h4>
-            {availableAddons.map((a) => (
-              <AddonRow
-                key={a.id}
-                label={a.name}
-                estimatedHours={a.estimatedHours}
-                value={addons[a.name.toLowerCase()]}
-                onChange={(v) =>
-                  setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
-                }
-                allowDecimal={false}
-              />
-            ))}
-          </div>
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
-              No. of Loads/Bags
-            </span>
-            <QuantityInput
-              value={numberOfBags}
-              onChange={setNumberOfBags}
+      {/* Add-Ons & No. of Bags Row */}
+      <div className="mt-6 mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        {/* Add-Ons */}
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-[#3878c2] mb-2">Add-Ons</h3>
+          {availableAddons.map((a) => (
+            <AddonRow
+              key={a.id}
+              label={a.name}
+              estimatedHours={a.estimatedHours}
+              value={addons[a.name.toLowerCase()]}
+              onChange={(v) =>
+                setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
+              }
               allowDecimal={false}
             />
-          </div>
+          ))}
         </div>
 
-        {/* Weight & Price Guide */}
+        {/* No. of Loads/Bags */}
+        <div className="sm:ml-6">
+          <h3 className="text-sm font-semibold text-[#3878c2] mb-2">No. of Loads/Bags</h3>
+          <QuantityInput
+            value={numberOfBags}
+            onChange={setNumberOfBags}
+            allowDecimal={false}
+          />
+        </div>
+      </div>
+
+      {/* Weight Guide, Price Guide, Bag Description */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         <div className="lg:col-span-2 grid gap-3">
           <div className="text-xs text-[#3878c2] bg-[#f0f6ff] p-3 rounded-lg border border-[#3878c2]/20">
             <p className="font-semibold mb-1">💡 Weight Guide</p>
