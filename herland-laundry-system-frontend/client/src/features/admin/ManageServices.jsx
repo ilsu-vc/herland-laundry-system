@@ -611,17 +611,6 @@ export default function ManageServices() {
                   placeholder="Price"
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
                 />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={serviceDraft.estimatedHours}
-                  onChange={(event) =>
-                    handleItemDraftChange('service', 'estimatedHours', event.target.value)
-                  }
-                  placeholder="Hours"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
-                />
                 <button
                   type="button"
                   onClick={() => handleAddItem('service')}
@@ -635,7 +624,6 @@ export default function ManageServices() {
                 <span className="flex-[1.5] text-left">Services</span>
                 <span className="flex-1 text-center sm:text-left px-1">Current Price</span>
                 <span className="flex-1 text-center sm:text-left px-1">Prev. Price</span>
-                <span className="flex-1 text-center sm:text-left px-1">Hours</span>
                 <div className="w-24 sm:w-28 shrink-0"></div>
               </div>
               <div className="space-y-4">
@@ -649,9 +637,6 @@ export default function ManageServices() {
                     </span>
                     <span className="flex-1 text-center sm:text-left text-[10px] sm:text-sm font-medium text-gray-400">
                       {s.previousPrice ? `₱${s.previousPrice.toFixed(2)}` : '-'}
-                    </span>
-                    <span className="flex-1 text-center sm:text-left text-xs sm:text-sm font-medium text-gray-600">
-                      {s.estimatedHours || 0} hrs
                     </span>
                     <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2 w-24 sm:w-28">
                       <button
@@ -749,17 +734,6 @@ export default function ManageServices() {
                   placeholder="Price"
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
                 />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={addOnDraft.estimatedHours}
-                  onChange={(event) =>
-                    handleItemDraftChange('addon', 'estimatedHours', event.target.value)
-                  }
-                  placeholder="Hours"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#3878c2] focus:outline-none"
-                />
                 <button
                   type="button"
                   onClick={() => handleAddItem('addon')}
@@ -773,7 +747,6 @@ export default function ManageServices() {
                 <span className="flex-[1.5] text-left">Add-On</span>
                 <span className="flex-1 text-center sm:text-left px-1">Current Price</span>
                 <span className="flex-1 text-center sm:text-left px-1">Prev. Price</span>
-                <span className="flex-1 text-center sm:text-left px-1">Hours</span>
                 <div className="w-24 sm:w-28 shrink-0"></div>
               </div>
               <div className="space-y-4">
@@ -787,9 +760,6 @@ export default function ManageServices() {
                     </span>
                     <span className="flex-1 text-center sm:text-left text-[10px] sm:text-sm font-medium text-gray-400">
                       {item.previousPrice ? `₱${item.previousPrice.toFixed(2)}` : '-'}
-                    </span>
-                    <span className="flex-1 text-center sm:text-left text-xs sm:text-sm font-medium text-gray-600">
-                      {item.estimatedHours || 0} hrs
                     </span>
                     <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2 w-24 sm:w-28">
                       <button
