@@ -97,9 +97,7 @@ VALUES
     ('service', 'Wash Only', 60.00, 1),
     ('service', 'Dry Only', 65.00, 2),
     ('service', 'Fold Only', 30.00, 3),
-    ('addon', 'Pride', 109.00, 4),
-    ('addon', 'Surf', 109.00, 5),
-    ('addon', 'Downy', 109.00, 6)
+    ('addon', 'Comforter', 150.00, 4)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO shop_schedule (opens, closes) 

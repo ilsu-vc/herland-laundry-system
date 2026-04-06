@@ -13,9 +13,8 @@ const fallbackServices = [
 ];
 
 const fallbackAddOns = [
-  { id: 'pride', name: 'Pride', currentPrice: 109.0, previousPrice: null },
-  { id: 'surf', name: 'Surf', currentPrice: 109.0, previousPrice: null },
-  { id: 'downy', name: 'Downy', currentPrice: 109.0, previousPrice: null },
+  { id: 'detergent', name: 'Detergent', currentPrice: 24.0, previousPrice: null },
+  { id: 'fabric-conditioner', name: 'Fabric Conditioner', currentPrice: 20.0, previousPrice: null },
 ];
 
 const fallbackSchedule = {

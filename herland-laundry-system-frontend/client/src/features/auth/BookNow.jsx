@@ -516,11 +516,13 @@ function StepSelectServices({
         ))}
       </div>
 
-      {/* Add-Ons & No. of Bags Row */}
-      <div className="mt-6 mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        {/* Add-Ons */}
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-[#3878c2] mb-2">Add-Ons</h3>
+      {/* Add-Ons */}
+      <h3 className="text-sm font-semibold text-[#3878c2] mt-6 mb-2">
+        Add-Ons
+      </h3>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <div className="lg:col-span-1">
           {availableAddons.map((a) => (
             <AddonRow
               key={a.id}
@@ -536,18 +538,18 @@ function StepSelectServices({
         </div>
 
         {/* No. of Loads/Bags */}
-        <div className="sm:ml-6">
-          <h3 className="text-sm font-semibold text-[#3878c2] mb-2">No. of Loads/Bags</h3>
+        <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
+          <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
+            No. of Loads/Bags
+          </span>
           <QuantityInput
             value={numberOfBags}
             onChange={setNumberOfBags}
             allowDecimal={false}
           />
         </div>
-      </div>
 
-      {/* Weight Guide, Price Guide, Bag Description */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        {/* Weight & Price Guide */}
         <div className="lg:col-span-2 grid gap-3">
           <div className="text-xs text-[#3878c2] bg-[#f0f6ff] p-3 rounded-lg border border-[#3878c2]/20">
             <p className="font-semibold mb-1">💡 Weight Guide</p>
