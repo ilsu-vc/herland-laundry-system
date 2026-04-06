@@ -516,37 +516,35 @@ function StepSelectServices({
         ))}
       </div>
 
-      {/* Add-Ons */}
-      <h3 className="text-sm font-semibold text-[#3878c2] mt-6 mb-2">
-        Add-Ons
-      </h3>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-        <div className="lg:col-span-1">
-          {availableAddons.map((a) => (
-            <AddonRow
-              key={a.id}
-              label={a.name}
-              estimatedHours={a.estimatedHours}
-              value={addons[a.name.toLowerCase()]}
-              onChange={(v) =>
-                setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
-              }
+        {/* Add-Ons + No. of Bags - aligned side by side */}
+        <div className="lg:col-span-2 grid gap-4 md:grid-cols-2">
+          <div>
+            <h4 className="text-xs font-semibold text-[#b4b4b4] uppercase tracking-wider mb-2">Add-Ons</h4>
+            {availableAddons.map((a) => (
+              <AddonRow
+                key={a.id}
+                label={a.name}
+                estimatedHours={a.estimatedHours}
+                value={addons[a.name.toLowerCase()]}
+                onChange={(v) =>
+                  setAddons((prev) => ({ ...prev, [a.name.toLowerCase()]: Math.max(0, Math.floor(v)) }))
+                }
+                allowDecimal={false}
+              />
+            ))}
+          </div>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
+              No. of Loads/Bags
+            </span>
+            <QuantityInput
+              value={numberOfBags}
+              onChange={setNumberOfBags}
               allowDecimal={false}
             />
-          ))}
-        </div>
-
-        {/* No. of Loads/Bags */}
-        <div className="flex items-start justify-between gap-2 mb-3 lg:col-span-1">
-          <span className="text-sm font-semibold text-[#3878c2] max-w-[60%] pr-2">
-            No. of Loads/Bags
-          </span>
-          <QuantityInput
-            value={numberOfBags}
-            onChange={setNumberOfBags}
-            allowDecimal={false}
-          />
+          </div>
         </div>
 
         {/* Weight & Price Guide */}
@@ -905,7 +903,9 @@ function StepCollection({
         {/* Collection Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#3878c2]">Scheduled Pickup</h3>
+            <h3 className="font-semibold text-[#3878c2]">
+              {option === 'pickedUpDelivered' ? 'Scheduled Pickup' : 'Scheduled Drop-Off'}
+            </h3>
             <div className="text-[10px] bg-white border border-[#3878c2] px-2 py-1 rounded-full">
               {collectionInfo.date ? formatDate(collectionInfo.date) : 'No date'} @ {collectionInfo.time ? formatTime(collectionInfo.time) : 'No time'}
             </div>
@@ -931,7 +931,9 @@ function StepCollection({
         {/* Delivery Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#3878c2]">Scheduled Drop-Off</h3>
+            <h3 className="font-semibold text-[#3878c2]">
+              {option === 'dropOffPickUpLater' ? 'Scheduled Pick-Up' : 'Scheduled Delivery'}
+            </h3>
             <div className="text-[10px] bg-white border border-[#3878c2] px-2 py-1 rounded-full">
               {deliveryInfo.date ? formatDate(deliveryInfo.date) : 'No date'} @ {deliveryInfo.time ? formatTime(deliveryInfo.time) : 'No time'}
             </div>
