@@ -11,30 +11,36 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [token, setToken] = useState('');
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    // Extract access_token from URL fragment
-    const hash = location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get('access_token');
-      if (accessToken) {
-        setToken(accessToken);
+    // Supabase automatically establishes a session when the user clicks the
+    // password-recovery email link (PASSWORD_RECOVERY event in main.jsx).
+    // We just need to confirm that a valid session exists before allowing reset.
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setHasSession(true);
       } else {
-        setError('Invalid or expired reset link. Please request a new one.');
+        // Also try parsing access_token from URL hash (fallback for older Supabase flows)
+        const hash = location.hash;
+        if (hash) {
+          const params = new URLSearchParams(hash.substring(1));
+          const accessToken = params.get('access_token');
+          if (accessToken) {
+            setHasSession(true);
+            return;
+          }
+        }
+        const queryParams = new URLSearchParams(location.search);
+        if (queryParams.get('access_token')) {
+          setHasSession(true);
+          return;
+        }
+        setError('No active reset session found. Please request a new reset link.');
       }
-    } else {
-      // If no hash, maybe it was a direct navigation? 
-      // In some cases Supabase uses query params instead of hash depending on config
-      const queryParams = new URLSearchParams(location.search);
-      const accessToken = queryParams.get('access_token');
-      if (accessToken) {
-        setToken(accessToken);
-      } else {
-         setError('No reset token found. Please use the link sent to your email.');
-      }
-    }
+    };
+    checkSession();
   }, [location]);
 
   const handleSubmit = async (e) => {

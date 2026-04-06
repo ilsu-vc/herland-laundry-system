@@ -239,6 +239,7 @@ const userNavItems = [
   { label: "Book Now", path: "/book", icon: BOOK_NOW_ICON, requiresAuth: true },
   { label: "Bookings", path: "/bookings", icon: BOOKINGS_ICON, requiresAuth: true },
   { label: "Chat with Us", path: "viber://chat?number=%2B639123456789", icon: CHAT_ICON, requiresAuth: true, isExternal: true },
+  { label: "Notifications", path: "/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
   { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
 ];
 
@@ -264,6 +265,7 @@ const adminNavItems = [
   { label: "Manage Services", path: "/admin/manage-services", icon: MANAGE_SERVICES_ICON, requiresAuth: true },
   { label: "Manage Users", path: "/admin/manage-users", icon: USER_ICON, requiresAuth: true },
   { label: "Reports", path: "/admin/reports", icon: REPORTS_ICON, requiresAuth: true },
+  { label: "Notifications", path: "/admin/notifications", icon: NOTIFICATIONS_ICON, requiresAuth: true },
   { label: "My Profile", path: "/profile", icon: USER_ICON, requiresAuth: true },
 ];
 

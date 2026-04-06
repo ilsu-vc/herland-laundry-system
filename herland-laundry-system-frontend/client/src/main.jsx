@@ -16,8 +16,11 @@ function AppShell() {
   const navigate = useNavigate()
   const isLoginRoute = location.pathname === '/login'
   const isSignupRoute = location.pathname === '/signup'
+  const isForgotPasswordRoute = location.pathname === '/forgot-password'
+  const isResetPasswordRoute = location.pathname === '/reset-password'
   const isLandingRoute = location.pathname === '/' || location.pathname === '/landing' || location.pathname === '/guest'
   const isRoleSwitcherRoute = location.pathname === '/role-switcher'
+  const isAuthPage = isForgotPasswordRoute || isResetPasswordRoute
   const isPublicRoute = isLandingRoute || isLoginRoute || isSignupRoute || isRoleSwitcherRoute
   const { hideBottomNav } = useLayout()
 
@@ -44,7 +47,8 @@ function AppShell() {
         }
 
         // Auto-redirect authenticated users away from public landing/auth pages
-        if (isPublicRoute && !isRoleSwitcherRoute) {
+        // But NOT if they are on the reset-password or forgot-password page
+        if (isPublicRoute && !isRoleSwitcherRoute && !isAuthPage) {
           const dashboardMap = {
             'Admin': '/admin',
             'Staff': '/staff',
@@ -65,6 +69,9 @@ function AppShell() {
       if (event === 'SIGNED_OUT') {
         window.sessionStorage.removeItem('activeRole')
         navigate('/', { replace: true })
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link from their email — send them to the reset form
+        navigate('/reset-password', { replace: true })
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         syncSession()
       }

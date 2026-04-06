@@ -38,6 +38,7 @@ const PageLoader = () => (
 function resolveNotificationsPathByRole() {
 	const activeRole = window.sessionStorage.getItem('activeRole')
 
+	if (activeRole === 'Admin') return '/admin/notifications'
 	if (activeRole === 'staff') return '/staff/notifications'
 	if (activeRole === 'rider') return '/rider/notifications'
 	return '/user/notifications'
@@ -101,6 +102,7 @@ export default function AppRoutes() {
 				<Route path="/user/notifications" element={<Notifications />} />
 				<Route path="/staff/notifications" element={<Notifications />} />
 				<Route path="/rider/notifications" element={<Notifications />} />
+				<Route path="/admin/notifications" element={<Notifications />} />
 				<Route path="/profile" element={<Profile />} />
 			</Routes>
 		</Suspense>
