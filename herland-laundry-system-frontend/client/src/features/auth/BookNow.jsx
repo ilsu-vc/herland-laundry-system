@@ -162,6 +162,8 @@ export default function BookNow() {
             setAddons(mergedAddons);
 
             setWeight(data.serviceDetails.weight || 0);
+            setNumberOfBags(data.serviceDetails.numberOfBags || 1);
+            setBagDescription(data.serviceDetails.bagDescription || "");
             setPaymentMethod(data.paymentDetails.method === "GCash" ? "gcash" : "cash");
             setNotes(data.notes || "");
             setCollectionInfo({
@@ -801,34 +803,21 @@ function StepCollection({
   useEffect(() => {
     if (!collectionInfo.date || !collectionInfo.time || !deliveryInfo.date || !deliveryInfo.time) {
       setIsValidTime(false);
-      setErrorMessage("Please select a date and time to continue.");
+      setErrorMessage("Please select a date and time slot to continue.");
       return;
     }
 
-    const dropOff = new Date(`${collectionInfo.date}T${collectionInfo.time}`);
-    const pickUp = new Date(`${deliveryInfo.date}T${deliveryInfo.time}`);
-    const diffMs = pickUp - dropOff;
-    const diffHrs = diffMs / (1000 * 60 * 60);
+    const collectionDateTime = new Date(`${collectionInfo.date}T${collectionInfo.time}`);
+    const deliveryDateTime = new Date(`${deliveryInfo.date}T${deliveryInfo.time}`);
 
-    // Check if delivery is within 4 hours before closing time (18:00)
-    const deliveryHour = parseInt(deliveryInfo.time.split(':')[0], 10);
-    const isWithin4HoursToClosing = (18 - deliveryHour) < 4;
-
-    // Add a small buffer of 0.01 to avoid floating point issues
-    if (isWithin4HoursToClosing) {
+    if (deliveryDateTime <= collectionDateTime) {
       setIsValidTime(false);
-      setErrorMessage("Delivery schedule cannot be booked within 4 hours before closing time (after 2:00 PM).");
-    } else if (diffHrs < 0) {
-      setIsValidTime(false);
-      setErrorMessage("Delivery time cannot be before the collection time.");
-    } else if (diffHrs < totalEstimatedHours - 0.01 && totalEstimatedHours > 0) {
-      setIsValidTime(false);
-      setErrorMessage(`Pick-up time is too early. Selected services need about ${totalEstimatedHours} hours.`);
+      setErrorMessage("The delivery/pick-up slot must be after the collection slot.");
     } else {
       setIsValidTime(true);
       setErrorMessage("");
     }
-  }, [collectionInfo.date, collectionInfo.time, deliveryInfo.date, deliveryInfo.time, totalEstimatedHours]);
+  }, [collectionInfo.date, collectionInfo.time, deliveryInfo.date, deliveryInfo.time]);
 
   const handleNextSubmit = () => {
     setShowErrors(true);

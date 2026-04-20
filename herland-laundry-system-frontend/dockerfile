@@ -1,19 +1,63 @@
-FROM node:20-alpine
+# =============================================================
+# Herland Laundry System — Frontend Dockerfile
+# =============================================================
+# Multi-stage build:
+#   Stage 1 (dev)     — Vite dev server with hot-reload
+#   Stage 2 (builder) — builds the production bundle
+#   Stage 3 (prod)    — serves static files via nginx (~30 MB)
+# =============================================================
 
-# Set working directory
+# ---------- Stage 1: Development (Vite dev server) -------------
+FROM node:20-alpine AS dev
 WORKDIR /app
 
-# Copy package.json from the client directory
 COPY client/package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
+COPY client/ .
 
-# Copy the rest of the frontend code
-COPY client/ ./
-
-# Expose Vite's default port
+ENV CHOKIDAR_USEPOLLING=true
 EXPOSE 5173
 
-# Run the app with --host to expose it outside the container
 CMD ["npm", "run", "dev", "--", "--host"]
+
+# ---------- Stage 2: Build the production bundle ---------------
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY client/package*.json ./
+RUN npm ci
+
+COPY client/ .
+
+# Build args allow env vars to be baked into the static bundle
+ARG VITE_API_URL
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_GOOGLE_MAPS_API_KEY
+
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+
+RUN npm run build
+
+# ---------- Stage 3: Production (nginx) ------------------------
+FROM nginx:stable-alpine AS production
+
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy our custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy the compiled static files from the builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:80/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

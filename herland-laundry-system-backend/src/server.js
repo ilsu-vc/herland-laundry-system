@@ -16,6 +16,11 @@ app.get('/', (req, res) => {
     res.send('Welcome to Herland Laundry System API');
 });
 
+// Health Check (used by Docker HEALTHCHECK)
+app.get('/api/v1/health', (req, res) => {
+    res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
 // Middleware Imports
 const { requireAuth } = require('./middleware/auth');
 

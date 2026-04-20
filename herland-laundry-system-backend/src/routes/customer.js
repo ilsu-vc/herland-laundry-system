@@ -57,24 +57,56 @@ router.get('/booked-slots', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('bookings')
-            .select('collection_details->>collectionDate, collection_details->>collectionTime')
+            .select('collection_details, collection_option')
             .neq('status', 'cancelled');
 
         if (error) throw error;
 
-        // Group by date and time to count bookings per slot
-        const slotCounts = {};
+        // Separate counters for pickups and deliveries per slot
+        const pickupCounts = {};    // key = date_time
+        const deliveryCounts = {};  // key = date_time
+
         (data || []).forEach(b => {
-            if (b.collectionDate && b.collectionTime) {
-                const key = `${b.collectionDate}_${b.collectionTime}`;
-                slotCounts[key] = (slotCounts[key] || 0) + 1;
+            const cd = b.collection_details || {};
+            const option = b.collection_option || 'dropOffPickUpLater';
+
+            // COLLECTION slot: counts as a pickup if rider picks up,
+            // otherwise it's a drop-off (customer comes in — not a delivery slot)
+            if (cd.collectionDate && cd.collectionTime) {
+                const key = `${cd.collectionDate}_${cd.collectionTime}`;
+                if (option === 'pickedUpDelivered') {
+                    // Rider picks up from customer
+                    pickupCounts[key] = (pickupCounts[key] || 0) + 1;
+                }
+                // dropOffPickUpLater / dropOffDelivered: customer drops off, no rider pickup slot used
+            }
+
+            // DELIVERY slot: counts as a delivery if rider delivers back
+            if (cd.deliveryDate && cd.deliveryTime) {
+                const key = `${cd.deliveryDate}_${cd.deliveryTime}`;
+                if (option === 'dropOffDelivered' || option === 'pickedUpDelivered') {
+                    deliveryCounts[key] = (deliveryCounts[key] || 0) + 1;
+                }
+                // dropOffPickUpLater: customer picks up — no rider delivery slot used
             }
         });
 
-        // Convert to a format the frontend can easily consume
-        const bookedSlots = Object.entries(slotCounts).map(([key, count]) => {
+        // Merge into one array per unique date+time, with separate counts
+        const allKeys = new Set([
+            ...Object.keys(pickupCounts),
+            ...Object.keys(deliveryCounts),
+        ]);
+
+        const bookedSlots = Array.from(allKeys).map(key => {
             const [date, time] = key.split('_');
-            return { date, time, count };
+            return {
+                date,
+                time,
+                pickup_count: pickupCounts[key] || 0,
+                delivery_count: deliveryCounts[key] || 0,
+                // legacy count field = max of both (used by calendar slot-full check)
+                count: Math.max(pickupCounts[key] || 0, deliveryCounts[key] || 0),
+            };
         });
 
         res.json(bookedSlots);
@@ -117,25 +149,43 @@ router.post('/book', requireAuth, async (req, res) => {
         const serviceNames =
             service_details?.selectedServices?.join(', ') || 'Laundry Service';
 
-        // ─── Capacity Limit Check (Max 8 per slot) ──────────────────────────────
+        // ─── Capacity Limit Check: 8 pickups + 8 deliveries per slot ────────────
         const collectionDate = collection_details?.collectionDate;
         const collectionTime = collection_details?.collectionTime;
+        const deliveryDate   = collection_details?.deliveryDate;
+        const deliveryTime   = collection_details?.deliveryTime;
+        const option         = collection_option || 'dropOffPickUpLater';
 
-        if (collectionDate && collectionTime) {
-            const { data: existingBookings, error: checkError } = await supabase
+        // Check pickup capacity (only for pickedUpDelivered)
+        if (option === 'pickedUpDelivered' && collectionDate && collectionTime) {
+            const { data: existingPickups, error: pickupCheckError } = await supabase
                 .from('bookings')
                 .select('id')
+                .eq('collection_option', 'pickedUpDelivered')
                 .eq('collection_details->>collectionDate', collectionDate)
                 .eq('collection_details->>collectionTime', collectionTime)
                 .neq('status', 'cancelled');
 
-            if (checkError) {
-                console.error('Check capacity limit error:', checkError);
+            if (!pickupCheckError && existingPickups && existingPickups.length >= 8) {
+                return res.status(400).json({
+                    error: 'The pickup slot is fully booked (max 8 pickups per slot). Please choose another time.'
+                });
             }
+        }
 
-            if (existingBookings && existingBookings.length >= 8) {
-                return res.status(400).json({ 
-                    error: 'This time slot is fully booked (max capacity reached). Please choose another time.' 
+        // Check delivery capacity (for dropOffDelivered and pickedUpDelivered)
+        if ((option === 'dropOffDelivered' || option === 'pickedUpDelivered') && deliveryDate && deliveryTime) {
+            const { data: existingDeliveries, error: deliveryCheckError } = await supabase
+                .from('bookings')
+                .select('id')
+                .in('collection_option', ['dropOffDelivered', 'pickedUpDelivered'])
+                .eq('collection_details->>deliveryDate', deliveryDate)
+                .eq('collection_details->>deliveryTime', deliveryTime)
+                .neq('status', 'cancelled');
+
+            if (!deliveryCheckError && existingDeliveries && existingDeliveries.length >= 8) {
+                return res.status(400).json({
+                    error: 'The delivery slot is fully booked (max 8 deliveries per slot). Please choose another time.'
                 });
             }
         }
@@ -204,6 +254,7 @@ function normalizeBooking(b) {
         paymentDetails: b.payment_details || null,
         status: b.status || 'pending',
         notes: b.notes || '',
+        created_at: b.created_at || null,
     };
 }
 
@@ -457,32 +508,61 @@ router.patch('/my-bookings/:id/update', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Only pending bookings can be modified.' });
         }
 
+        // ─── 15-minute edit window enforcement ──────────────────────────────
+        const EDIT_WINDOW_MS = 15 * 60 * 1000;
+        const createdAt = new Date(booking.created_at).getTime();
+        if (Date.now() - createdAt > EDIT_WINDOW_MS) {
+            return res.status(403).json({
+                error: 'The 15-minute editing window has expired. This booking can no longer be modified.'
+            });
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         const nowIso = new Date().toISOString();
         const updatedTimeline = [
             ...(booking.timeline || []),
             { status: 'Booking Edited', timestamp: nowIso }
         ];
 
-        // ─── Capacity Limit Check (Max 8 per slot) ──────────────────────────────
+        // ─── Capacity Limit Check: 8 pickups + 8 deliveries per slot ────────────
         const collectionDate = collection_details?.collectionDate || booking.collection_details?.collectionDate;
         const collectionTime = collection_details?.collectionTime || booking.collection_details?.collectionTime;
+        const deliveryDate   = collection_details?.deliveryDate   || booking.collection_details?.deliveryDate;
+        const deliveryTime   = collection_details?.deliveryTime   || booking.collection_details?.deliveryTime;
+        const option         = collection_option || booking.collection_option || 'dropOffPickUpLater';
 
-        if (collectionDate && collectionTime) {
-            const { data: existingBookings, error: checkError } = await supabase
+        // Check pickup capacity (only for pickedUpDelivered)
+        if (option === 'pickedUpDelivered' && collectionDate && collectionTime) {
+            const { data: existingPickups, error: pickupCheckError } = await supabase
                 .from('bookings')
                 .select('id')
+                .eq('collection_option', 'pickedUpDelivered')
                 .eq('collection_details->>collectionDate', collectionDate)
                 .eq('collection_details->>collectionTime', collectionTime)
                 .neq('status', 'cancelled')
-                .neq('id', booking.id); // Exclude current booking
+                .neq('id', booking.id);
 
-            if (checkError) {
-                console.error('Check capacity limit error:', checkError);
+            if (!pickupCheckError && existingPickups && existingPickups.length >= 8) {
+                return res.status(400).json({
+                    error: 'The pickup slot is fully booked (max 8 pickups per slot). Please choose another time.'
+                });
             }
+        }
 
-            if (existingBookings && existingBookings.length >= 8) {
-                return res.status(400).json({ 
-                    error: 'The new time slot is fully booked (max capacity reached). Please choose another time.' 
+        // Check delivery capacity (for dropOffDelivered and pickedUpDelivered)
+        if ((option === 'dropOffDelivered' || option === 'pickedUpDelivered') && deliveryDate && deliveryTime) {
+            const { data: existingDeliveries, error: deliveryCheckError } = await supabase
+                .from('bookings')
+                .select('id')
+                .in('collection_option', ['dropOffDelivered', 'pickedUpDelivered'])
+                .eq('collection_details->>deliveryDate', deliveryDate)
+                .eq('collection_details->>deliveryTime', deliveryTime)
+                .neq('status', 'cancelled')
+                .neq('id', booking.id);
+
+            if (!deliveryCheckError && existingDeliveries && existingDeliveries.length >= 8) {
+                return res.status(400).json({
+                    error: 'The delivery slot is fully booked (max 8 deliveries per slot). Please choose another time.'
                 });
             }
         }

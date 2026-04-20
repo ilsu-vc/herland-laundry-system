@@ -332,9 +332,9 @@ export default function LandingPage() {
         <h2 className="text-[#3878c2] text-3xl font-bold mb-6">
           Contact Us
         </h2>
-        <p className="text-[#3878c2] text-sm sm:text-base">📍 123 Laundry Street, Pasay City</p>
-        <p className="text-[#3878c2] text-sm sm:text-base">📞 +63 912 345 6789</p>
-        <p className="text-[#3878c2] text-sm sm:text-base">✉️ hello@herlandlaundry.com</p>
+        <p className="text-[#3878c2] text-sm sm:text-base">📍 72 Balite St. Pasay</p>
+        <p className="text-[#3878c2] text-sm sm:text-base">📞 09272276218</p>
+        <p className="text-[#3878c2] text-sm sm:text-base">✉️ herlandlaundryph@gmail.com</p>
       </div>
 
       {/* Footer */}

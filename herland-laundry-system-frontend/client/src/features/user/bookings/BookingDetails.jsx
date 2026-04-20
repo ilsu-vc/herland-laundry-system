@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import VerticalStepper from "../../../shared/components/VerticalStepper";
 import { supabase } from "../../../lib/supabase";
@@ -7,6 +7,7 @@ import { useToast } from "../../../shared/components/Toast";
 import { useConfirm } from "../../../shared/components/ConfirmationModal";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/customer`;
+const EDIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 export default function BookingDetails() {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ export default function BookingDetails() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComment, setFeedbackComment] = useState("");
+  const [editTimeLeft, setEditTimeLeft] = useState(null); // seconds remaining, null = not computed yet
+  const editWarningShown = useRef(false);
 
   const fetchBooking = useCallback(async () => {
     try {
@@ -62,6 +65,41 @@ export default function BookingDetails() {
     fetchBooking();
   }, [fetchBooking]);
 
+  // ── 15-minute edit countdown timer ──────────────────────────────────────
+  useEffect(() => {
+    if (!booking?.created_at) return;
+    if (booking.status?.toLowerCase() !== "pending") return;
+
+    const createdAt = new Date(booking.created_at).getTime();
+    const deadline = createdAt + EDIT_WINDOW_MS;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+      setEditTimeLeft(remaining);
+
+      if (remaining <= 0 && !editWarningShown.current) {
+        editWarningShown.current = true;
+        showToast(
+          "⚠️ The 15-minute editing window has expired. You can no longer edit this booking.",
+          "error"
+        );
+      }
+    };
+
+    tick(); // immediate first check
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [booking?.created_at, booking?.status]);
+
+  const formatCountdown = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
+
+  const isEditWindowOpen = editTimeLeft !== null && editTimeLeft > 0;
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleCancel = async () => {
     if (!(await confirm("Are you sure you want to cancel this booking?"))) return;
 
@@ -95,6 +133,13 @@ export default function BookingDetails() {
   };
 
   const handleEdit = () => {
+    if (!isEditWindowOpen) {
+      showToast(
+        "⚠️ The 15-minute editing window has expired. You can no longer edit this booking.",
+        "error"
+      );
+      return;
+    }
     navigate(`/book?edit=${bookingId}`);
   };
 
@@ -263,11 +308,26 @@ export default function BookingDetails() {
             )}
             {booking?.status?.toLowerCase() === "pending" && (
               <>
+                {/* Edit button with countdown */}
                 <button
                   onClick={handleEdit}
-                  className="rounded-lg border border-[#3878c2] px-3 py-1.5 text-sm font-medium text-[#3878c2] hover:bg-[#3878c2]/5 transition"
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition flex items-center gap-1.5 ${
+                    isEditWindowOpen
+                      ? 'border-[#3878c2] text-[#3878c2] hover:bg-[#3878c2]/5'
+                      : 'border-gray-300 text-gray-400 hover:bg-gray-50'
+                  }`}
                 >
                   Edit
+                  {editTimeLeft !== null && editTimeLeft > 0 && (
+                    <span className="text-[10px] font-mono bg-[#3878c2]/10 text-[#3878c2] px-1.5 py-0.5 rounded">
+                      {formatCountdown(editTimeLeft)}
+                    </span>
+                  )}
+                  {editTimeLeft !== null && editTimeLeft <= 0 && (
+                    <span className="text-[10px] font-mono bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">
+                      Expired
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={handleCancel}

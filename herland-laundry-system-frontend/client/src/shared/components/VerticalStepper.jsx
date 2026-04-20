@@ -2,7 +2,7 @@ import { getStatusMeta } from "./StatusMeta";
 
 export default function VerticalStepper({ steps = [] }) {
 	return (
-		<ul className="relative ml-3" style={{ borderLeft: "2px solid #b4b4b4" }}>
+		<ul className="relative ml-5 overflow-visible" style={{ borderLeft: "2px solid #b4b4b4" }}>
 			{steps.map((step, index) => {
 				const dateObj = step.timestamp ? new Date(step.timestamp) : null;
 
@@ -24,7 +24,7 @@ export default function VerticalStepper({ steps = [] }) {
 				return (
 					<li 
 						key={`${step.status}-${index}`} 
-						className="mb-8 ml-6 transition-all duration-300"
+						className="mb-8 ml-10 transition-all duration-300"
 						style={{ 
 							filter: isReached ? "none" : "blur(1px) grayscale(100%)",
 							opacity: isReached ? 1 : 0.5

@@ -1,29 +1,53 @@
-#Instruction go here if yo didn't know what to do
-FROM node:20-alpine
+# =============================================================
+# Herland Laundry System — Backend Dockerfile
+# =============================================================
+# Multi-stage build:
+#   Stage 1 (deps)    — install only production dependencies
+#   Stage 2 (dev)     — adds devDependencies + nodemon for local dev
+#   Stage 3 (prod)    — lean production image (~60 MB)
+# =============================================================
 
-#Goes to the app directory (think of it like a cd terminal command)
+# ---------- Stage 1: Install production dependencies ----------
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-#Copies the package.json and package-lock.json to the app directory
-COPY package*.json .
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-#Installs the dependencies
-RUN npm install
+# ---------- Stage 2: Development (hot-reload via nodemon) ------
+FROM node:20-alpine AS dev
+WORKDIR /app
 
-#Copies the rest of the code to the app directory
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
 
-#Sets the port to 3000
+ENV NODE_ENV=development
 ENV PORT=5000
-
-#Exposes the port 3000
 EXPOSE 5000
 
-#Runs the app
+# nodemon watches for file changes inside the container
 CMD ["npm", "run", "dev"]
 
-#To build the image (Do it in the terminal command)
-#docker build -t herland-laundry-system-backend .
+# ---------- Stage 3: Production --------------------------------
+FROM node:20-alpine AS production
+WORKDIR /app
 
-#To run the image
-#docker run -p 5000:5000 herland-laundry-system
+# Copy only the production node_modules from Stage 1
+COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json ./
+
+# Copy application source
+COPY src ./src
+
+ENV NODE_ENV=production
+ENV PORT=5000
+EXPOSE 5000
+
+# Health-check: hit a lightweight endpoint every 30s
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:5000/api/v1/health || exit 1
+
+# Run with plain node (no dev tooling in production)
+CMD ["node", "src/server.js"]

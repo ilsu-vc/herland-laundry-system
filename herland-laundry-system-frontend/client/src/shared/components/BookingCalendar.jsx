@@ -1,28 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useToast } from './Toast';
 
+// Only 2 time slots per day: Morning and Afternoon
 const TIME_SLOTS = [
-  '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
-  '14:00', '15:00', '16:00'
+  { value: '08:30', label: 'Morning (8:30 AM)', period: 'AM' },
+  { value: '13:00', label: 'Afternoon (1:00 PM)', period: 'PM' },
 ];
-
-const formatTimeLabel = (timeStr) => {
-  const [hours] = timeStr.split(':');
-  const h = parseInt(hours);
-  const ampm = h >= 12 ? 'pm' : 'am';
-  const displayH = h % 12 || 12;
-  const endH = (h + 1) % 24;
-  const endAmpm = endH >= 12 ? 'pm' : 'am';
-  const displayEndH = endH % 12 || 12;
-  return `${displayH}:00 ${ampm} - ${displayEndH}:00 ${endAmpm}`;
-};
 
 export default function BookingCalendar({ selectedDate, onDateChange, selectedTime, onTimeChange }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedSlots, setBookedSlots] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [customTime, setCustomTime] = useState('');
-  const [ampm, setAmpm] = useState('AM');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -48,61 +36,61 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
-  const isSelectedDate = (day) => {
-    if (!selectedDate) return false;
-    const date = new Date(selectedDate);
-    return date.getDate() === day && date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear();
+  // Parse a YYYY-MM-DD string as local date (avoids UTC-offset shift)
+  const parseLocalDate = (dateStr) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
   };
 
-  const getBookingCount = (day, time) => {
-    const formattedDate = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const slot = bookedSlots.find(s => s.date === formattedDate && s.time === time);
+  const isSelectedDate = (day) => {
+    if (!selectedDate) return false;
+    const date = parseLocalDate(selectedDate);
+    return (
+      date.getDate() === day &&
+      date.getMonth() === currentMonth.getMonth() &&
+      date.getFullYear() === currentMonth.getFullYear()
+    );
+  };
+
+  const formatDate = (day) =>
+    `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  const getBookingCount = (day, timeValue) => {
+    const formattedDate = formatDate(day);
+    const slot = bookedSlots.find(s => s.date === formattedDate && s.time === timeValue);
     return slot ? slot.count : 0;
   };
 
-  const isBooked = (day, time) => {
-    return getBookingCount(day, time) >= 8;
-  };
+  const isSlotFullyBooked = (day, timeValue) => getBookingCount(day, timeValue) >= 8;
 
+  // A date has *any* bookings (used for the light blue dot indicator)
   const hasBookingsOnDate = (day) => {
-    const formattedDate = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const formattedDate = formatDate(day);
     return bookedSlots.some(slot => slot.date === formattedDate);
   };
 
   const handleDateClick = (day) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    if (clickedDate < today) return;
-
-    const formattedDate = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    onDateChange(formattedDate);
+    const clicked = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    if (clicked < today) return;
+    onDateChange(formatDate(day));
+    // Clear time selection when date changes
+    onTimeChange('');
   };
 
-  const handleCustomTimeBlur = () => {
-    if (!customTime) return;
-    
-    // Parse input (like "9:30" or "9")
-    let [hours, minutes] = customTime.split(':').map(val => parseInt(val) || 0);
-    if (isNaN(hours)) return;
-
-    // Convert to 24h format based on AM/PM
-    if (ampm === 'PM' && hours < 12) hours += 12;
-    if (ampm === 'AM' && hours === 12) hours = 0;
-
-    // Nearest hour logic: if minutes >= 30, round up, else round down
-    // But since the shop hours are blocks (e.g., 9:00 - 10:00), we usually snap to the start of the hour.
-    // User said: "9:30 --> it will be 9:00 - 10:00"
-    // This implies snapping to the HOUR start.
-    
-    const snapHour = hours;
-    const formattedHour = String(snapHour).padStart(2, '0') + ':00';
-    
-    if (TIME_SLOTS.includes(formattedHour)) {
-      onTimeChange(formattedHour);
-    } else {
-      showToast("Please enter a time within operating hours (8:00 AM - 4:00 PM).", "error");
-    }
+  // Check if a time slot is in the past for today
+  const isSlotPast = (timeValue) => {
+    if (!selectedDate) return false;
+    const today = new Date();
+    const sel = parseLocalDate(selectedDate);
+    const isSameDay =
+      sel.getFullYear() === today.getFullYear() &&
+      sel.getMonth() === today.getMonth() &&
+      sel.getDate() === today.getDate();
+    if (!isSameDay) return false;
+    const slotHour = parseInt(timeValue.split(':')[0], 10);
+    return slotHour <= today.getHours();
   };
 
   const renderCalendar = () => {
@@ -113,25 +101,25 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
     today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < startDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-10 w-full"></div>);
+      days.push(<div key={`empty-${i}`} className="h-10 w-full" />);
     }
 
     for (let d = 1; d <= totalDays; d++) {
       const selected = isSelectedDate(d);
-      const booked = hasBookingsOnDate(d);
       const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
       const isPast = dateObj < today;
-      
+
       days.push(
         <button
           key={d}
           disabled={isPast}
           onClick={() => handleDateClick(d)}
           className={`h-10 w-full rounded-md flex items-center justify-center text-sm font-medium transition-colors ${
-            selected ? 'bg-[#3878c2] text-white' : 
-            isPast ? 'text-gray-300 cursor-not-allowed' :
-            booked ? 'bg-[#3878c2]/20 text-[#3878c2]' : 
-            'hover:bg-gray-100 text-gray-700'
+            selected
+              ? 'bg-[#3878c2] text-white'
+              : isPast
+              ? 'text-gray-300 cursor-not-allowed'
+              : 'hover:bg-gray-100 text-gray-700'
           }`}
         >
           {d}
@@ -161,6 +149,7 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
         </button>
       </div>
 
+      {/* Day headers */}
       <div className="bg-gray-100 grid grid-cols-7 gap-1 px-2 py-2">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
           <div key={day} className="text-center text-[10px] font-bold text-gray-500 uppercase">
@@ -169,55 +158,83 @@ export default function BookingCalendar({ selectedDate, onDateChange, selectedTi
         ))}
       </div>
 
+      {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1 p-2">
         {renderCalendar()}
       </div>
 
-      <div className="border-t border-gray-100 p-4 space-y-4">
+      {/* Time slot selector */}
+      <div className="border-t border-gray-100 p-4">
         {selectedDate ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-[#3878c2] uppercase mb-2">Select Time Slot</label>
-              <select 
-                value={selectedTime}
-                onChange={(e) => onTimeChange(e.target.value)}
-                className="w-full p-2.5 text-sm border border-gray-200 rounded-lg text-[#3878c2] bg-white focus:outline-none focus:ring-1 focus:ring-[#3878c2]"
-              >
-                <option value="">Choose a schedule...</option>
-                {TIME_SLOTS.map(time => {
-                  const day = new Date(selectedDate).getDate();
-                  const count = getBookingCount(day, time);
-                  const booked = count >= 8;
-                  
-                  const today = new Date();
-                  const selected = new Date(selectedDate);
-                  let past = false;
-                  if (
-                    selected.getFullYear() === today.getFullYear() &&
-                    selected.getMonth() === today.getMonth() &&
-                    selected.getDate() === today.getDate()
-                  ) {
-                    const hour = parseInt(time.split(':')[0], 10);
-                    if (hour <= today.getHours()) {
-                      past = true;
-                    }
-                  }
-                  
-                  const disabled = booked || past;
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-[#3878c2] uppercase mb-2">
+              Select Time Slot
+            </label>
 
-                  return (
-                    <option key={time} value={time} disabled={disabled}>
-                      {formatTimeLabel(time)} {booked ? '(Fully Booked)' : past ? '(Unavailable)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              {TIME_SLOTS.map(slot => {
+                const fullyBooked = isSlotFullyBooked(
+                  parseLocalDate(selectedDate).getDate(),
+                  slot.value
+                );
+                const past = isSlotPast(slot.value);
+                const disabled = fullyBooked || past;
+                const isSelected = selectedTime === slot.value;
+
+                return (
+                  <button
+                    key={slot.value}
+                    disabled={disabled}
+                    onClick={() => onTimeChange(isSelected ? '' : slot.value)}
+                    className={`
+                      relative flex flex-col items-center justify-center gap-1
+                      py-4 px-3 rounded-xl border-2 font-semibold text-sm
+                      transition-all duration-150
+                      ${
+                        disabled
+                          ? 'opacity-40 cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400'
+                          : isSelected
+                          ? 'border-[#3878c2] bg-[#3878c2] text-white shadow-md'
+                          : 'border-[#3878c2]/30 bg-white text-[#3878c2] hover:border-[#3878c2] hover:bg-[#3878c2]/5'
+                      }
+                    `}
+                  >
+                    {/* Sun / Moon icon */}
+                    <span className="text-xl">
+                      {slot.period === 'AM' ? '🌤️' : '🌇'}
+                    </span>
+                    <span className="text-xs font-bold">
+                      {slot.period === 'AM' ? 'Morning' : 'Afternoon'}
+                    </span>
+                    <span className="text-[10px] opacity-75">
+                      {slot.period === 'AM' ? '8:30 AM' : '1:00 PM'}
+                    </span>
+                    {fullyBooked && (
+                      <span className="absolute top-1.5 right-2 text-[9px] font-bold text-red-400 uppercase">
+                        Full
+                      </span>
+                    )}
+                    {past && !fullyBooked && (
+                      <span className="absolute top-1.5 right-2 text-[9px] font-bold text-gray-400 uppercase">
+                        Passed
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {selectedTime && (
               <div className="p-3 bg-[#3878c2]/5 rounded-lg border border-[#3878c2]/10 flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#3878c2]">Selected: {formatTimeLabel(selectedTime)}</span>
-                <button onClick={() => onTimeChange('')} className="text-[10px] font-bold text-red-400 uppercase">Clear</button>
+                <span className="text-xs font-semibold text-[#3878c2]">
+                  Selected: {TIME_SLOTS.find(s => s.value === selectedTime)?.label}
+                </span>
+                <button
+                  onClick={() => onTimeChange('')}
+                  className="text-[10px] font-bold text-red-400 uppercase"
+                >
+                  Clear
+                </button>
               </div>
             )}
           </div>
