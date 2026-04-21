@@ -166,9 +166,9 @@ export default function InfoCard({
                   />
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-[#3878c2]">Role:</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       {/* Checkbox for "Set as Employee" */}
-                        <label className="flex items-center gap-2 cursor-pointer mt-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={editData?.role === 'Staff'}
@@ -179,6 +179,19 @@ export default function InfoCard({
                             className="w-4 h-4 text-[#3878c2] border-gray-300 rounded focus:ring-[#3878c2]"
                           />
                           <span className="text-sm text-gray-700">Set as Employee</span>
+                        </label>
+                      {/* Checkbox for "Set as Rider" */}
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editData?.role === 'Rider'}
+                            onChange={(e) => {
+                              const newRole = e.target.checked ? 'Rider' : 'Customer';
+                              onInputChange({ target: { name: 'role', value: newRole } });
+                            }}
+                            className="w-4 h-4 text-[#3878c2] border-gray-300 rounded focus:ring-[#3878c2]"
+                          />
+                          <span className="text-sm text-gray-700">Set as Rider</span>
                         </label>
                     </div>
                   </div>

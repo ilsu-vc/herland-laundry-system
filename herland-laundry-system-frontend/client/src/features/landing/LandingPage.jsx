@@ -153,7 +153,7 @@ export default function LandingPage() {
     if (isLoggedIn) {
       navigate('/book');
     } else {
-      navigate('/signup?redirect=book');
+      navigate('/login?redirect=book');
     }
   };
 
@@ -328,7 +328,7 @@ export default function LandingPage() {
       </div>
 
       {/* Contact Us */}
-      <div id="services" className="mt-12 px-5 sm:px-6 md:px-8 xl:px-12 max-w-6xl mx-auto space-y-1">
+      <div id="contact" className="mt-12 px-5 sm:px-6 md:px-8 xl:px-12 max-w-6xl mx-auto space-y-1">
         <h2 className="text-[#3878c2] text-3xl font-bold mb-6">
           Contact Us
         </h2>

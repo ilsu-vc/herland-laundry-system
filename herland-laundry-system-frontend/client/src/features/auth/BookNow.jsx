@@ -18,7 +18,33 @@ const defaultCenter = { lat: 14.537751, lng: 121.001379 }; // Pasay approximate
 export default function BookNow() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const isEditMode = !!editId;
+  
   const [step, setStep] = useState(1);
+
+  // Save booking state to localStorage (simplified approach)
+  useEffect(() => {
+    if (!isEditMode) {
+      localStorage.setItem('bookingStep', step.toString());
+    }
+  }, [step, isEditMode]);
+
+  // Clear localStorage when booking is completed successfully
+  const clearBookingState = () => {
+    localStorage.removeItem('bookingStep');
+    localStorage.removeItem('bookingServices');
+    localStorage.removeItem('bookingAddons');
+    localStorage.removeItem('bookingWeight');
+    localStorage.removeItem('bookingPaymentMethod');
+    localStorage.removeItem('bookingNumberOfBags');
+    localStorage.removeItem('bookingBagDescription');
+    localStorage.removeItem('bookingNotes');
+    localStorage.removeItem('bookingCollectionInfo');
+    localStorage.removeItem('bookingDeliveryInfo');
+    localStorage.removeItem('bookingCustomerLocation');
+  };
 
   // Auth Check
   useEffect(() => {
@@ -26,11 +52,12 @@ export default function BookNow() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         showToast("Please sign up or log in to create a booking.", "error");
-        navigate('/signup?redirect=book');
+        navigate('/login?redirect=book');
       }
     };
     checkAuth();
-  }, [navigate]);
+  }, [navigate, showToast]);
+
   const [services, setServices] = useState({});
   const [addons, setAddons] = useState({});
   const [weight, setWeight] = useState(0);
@@ -41,10 +68,6 @@ export default function BookNow() {
   const [numberOfBags, setNumberOfBags] = useState(1);
   const [bagDescription, setBagDescription] = useState("");
   const [notes, setNotes] = useState("");
-  const [searchParams] = useSearchParams();
-  const editId = searchParams.get("edit");
-  const isEditMode = !!editId;
-
   const { setHideBottomNav } = useLayout();
   const { requestLocationPermission } = usePermissions();
   const [collectionInfo, setCollectionInfo] = useState({
@@ -235,6 +258,7 @@ export default function BookNow() {
   const handleStepChange = (newStep) => {
     // Check if moving to step 3 (Address) and request location permission
     if (newStep === 3) {
+      // In edit mode, if we already have saved coordinates, still request fresh location
       requestLocationPermission((granted, coords) => {
         if (granted && coords) {
           setCustomerLocation(prev => ({
@@ -1024,6 +1048,28 @@ function StepAddress({ onBack, onNext, isMapLoaded, initialLocation, saveHomeAdd
   const [searchValue, setSearchValue] = useState(initialLocation?.address || "");
   const [isGeocoding, setIsGeocoding] = useState(false);
 
+  // Auto-reverse geocode when location coordinates change
+  useEffect(() => {
+    if (initialLocation?.lat && initialLocation?.lng && !initialLocation?.address && isMapLoaded) {
+      setIsGeocoding(true);
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat: initialLocation.lat, lng: initialLocation.lng } }, (results, status) => {
+          setIsGeocoding(false);
+          if (status === "OK" && results && results[0]) {
+            const address = results[0].formatted_address;
+            setLocation({ address, lat: initialLocation.lat, lng: initialLocation.lng });
+            setSearchValue(address);
+            setMapCenter({ lat: initialLocation.lat, lng: initialLocation.lng });
+          }
+        });
+      } catch (err) {
+        setIsGeocoding(false);
+        console.error("Reverse geocoding failed:", err);
+      }
+    }
+  }, [initialLocation?.lat, initialLocation?.lng, initialLocation?.address, isMapLoaded]);
+
   const onLoad = (autoC) => setAutocomplete(autoC);
 
   const onPlaceChanged = () => {
@@ -1247,6 +1293,7 @@ function StepReview({
   const [backendError, setBackendError] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const calculateTotal = () => {
     let total = 0;
@@ -1423,6 +1470,9 @@ function StepReview({
         </button>
         <button
           onClick={async () => {
+            if (isSubmitting) return; // Prevent spam clicking
+            setIsSubmitting(true);
+            
             const nextReference = isEditMode ? editId : generateReferenceNumber();
             const nextPaymentReference = "";
 
@@ -1491,23 +1541,32 @@ function StepReview({
               const { data: { session } } = await supabase.auth.getSession();
               const token = session?.access_token;
 
+              if (!token) {
+                throw new Error("No authentication token found");
+              }
+
               const url = isEditMode 
                 ? `${import.meta.env.VITE_API_URL}/api/v1/customer/my-bookings/${editId}/update` 
                 : `${import.meta.env.VITE_API_URL}/api/v1/customer/book`;
               
               const method = isEditMode ? "PATCH" : "POST";
 
+              console.log("Booking request:", { url, method, payload });
+
               const response = await fetch(url, {
                 method,
                 headers: {
                   "Content-Type": "application/json",
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
               });
 
+              console.log("Booking response:", response.status, response.statusText);
+
               if (response.ok) {
                 const result = await response.json();
+                console.log("Booking result:", result);
                 const ref = isEditMode ? editId : (result.booking?.reference_number || nextReference);
                 
                 if (isEditMode) {
@@ -1539,6 +1598,11 @@ function StepReview({
                  setBookingStatus("success");
                  setReferenceNumber(ref);
                  setPaymentReference(nextPaymentReference);
+                 try {
+                   clearBookingState(); // Clear saved state on success
+                 } catch (clearError) {
+                   console.error("Error clearing booking state:", clearError);
+                 }
                } else {
                 const errData = await response.json().catch(() => ({}));
                 console.error("Booking request failed:", errData.error || response.statusText);
@@ -1553,13 +1617,16 @@ function StepReview({
               setBackendError("An unexpected error occurred. Please try again.");
               setReferenceNumber("");
               setPaymentReference("");
+            } finally {
+              setIsSubmitting(false);
             }
 
             setIsSuccessOpen(true);
           }}
-          className="px-4 py-2 rounded text-white bg-[#4bad40]"
+          disabled={isSubmitting}
+          className={`px-4 py-2 rounded text-white transition-colors ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#4bad40] hover:bg-[#3f9136]'}`}
         >
-          {isEditMode ? "Update Booking" : "Confirm Booking"}
+          {isSubmitting ? (isEditMode ? "Updating..." : "Confirming...") : (isEditMode ? "Update Booking" : "Confirm Booking")}
         </button>
       </div>
 

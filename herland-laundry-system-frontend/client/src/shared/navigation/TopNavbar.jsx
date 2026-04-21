@@ -85,7 +85,14 @@ export default function TopNavbar({
       setTimeout(() => {
         const section = document.getElementById(item.sectionId);
         if (section) {
-          section.scrollIntoView({ behavior: 'smooth' });
+          const navbarHeight = 80; // Height of the fixed navbar
+          const elementPosition = section.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - navbarHeight;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
         }
       }, 100);
       return;
@@ -93,7 +100,14 @@ export default function TopNavbar({
 
     const section = document.getElementById(item.sectionId);
     if (section) {
-      section.scrollIntoView({ behavior: 'smooth' });
+      const navbarHeight = 80; // Height of the fixed navbar
+      const elementPosition = section.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - navbarHeight;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
 

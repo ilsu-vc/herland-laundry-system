@@ -360,6 +360,31 @@ export default function BookingDetails() {
 
         <div className="mb-8 border-t border-[#f0f0f0]" />
 
+        {/* Cancellation Notice - Show only if booking is cancelled */}
+        {booking?.status?.toLowerCase() === "cancelled" && (
+          <div className="mb-6 rounded-2xl border border-[#e55353]/20 bg-[#fef2f2] p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-[#e55353]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-[#e55353] mb-2">Booking Cancelled</h4>
+                <p className="text-xs text-[#374151] leading-relaxed">
+                  {booking?.cancellationReason ? (
+                    <>
+                      <span className="font-medium">Reason:</span> {booking.cancellationReason}
+                    </>
+                  ) : (
+                    "This booking has been cancelled by our staff. Common reasons for cancellation include: failed or incomplete payment verification, inability to process the requested services, scheduling conflicts, or other operational issues. If you have questions about this cancellation, please contact our support team."
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Left Column: Timeline */}
           <div className="lg:col-span-1">
@@ -505,10 +530,6 @@ export default function BookingDetails() {
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-[#b4b4b4] font-semibold uppercase text-xs">Total Amount</span>
                     <span className="font-bold text-[#374151]">₱{booking?.paymentDetails?.totalAmount?.toFixed(2) || "0.00"}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-[#b4b4b4] font-semibold uppercase text-xs">Downpayment Paid</span>
-                    <span className="font-bold text-[#4bad40]">₱{booking?.paymentDetails?.downpaymentRequired?.toFixed(2) || "0.00"}</span>
                   </div>
                   <div className="flex justify-between items-center border-t border-dashed border-[#d9e8fb] pt-2">
                     <span className="text-[#3878c2] font-bold uppercase text-xs">Remaining Balance</span>

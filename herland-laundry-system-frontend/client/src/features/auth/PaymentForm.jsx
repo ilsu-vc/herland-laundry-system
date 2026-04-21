@@ -66,7 +66,7 @@ export default function PaymentForm() {
 	}, [fetchBookingDetails]);
 
 	const isValidReference = useMemo(
-		() => /^[A-Za-z0-9-]{6,30}$/.test(referenceNumber.trim()),
+		() => /^\d{1,13}$/.test(referenceNumber.trim()),
 		[referenceNumber]
 	);
 
@@ -159,16 +159,22 @@ export default function PaymentForm() {
 							type="text"
 							value={referenceNumber}
 							onChange={(event) => {
-								setSubmitted(false);
-								setReferenceNumber(event.target.value);
+								const value = event.target.value;
+								// Only allow digits and limit to 13 characters
+								const digitsOnly = value.replace(/\D/g, '');
+								if (digitsOnly.length <= 13) {
+									setSubmitted(false);
+									setReferenceNumber(digitsOnly);
+								}
 							}}
 							disabled={submitting}
-							placeholder="Enter your GCash reference number"
+							placeholder="Enter your GCash reference number (digits only)"
+							maxLength={13}
 							className="w-full rounded border border-[#3878c2] bg-white px-3 py-2 text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4] outline-none disabled:opacity-50"
 						/>
 						{referenceNumber && !isValidReference ? (
 							<p className="mt-1 text-xs text-[#e55353]">
-								Enter 6-30 characters using letters, numbers, or hyphens only.
+								Enter up to 13 digits only for the reference number.
 							</p>
 						) : null}
 					</div>

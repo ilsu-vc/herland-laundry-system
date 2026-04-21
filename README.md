@@ -38,7 +38,7 @@ herland-laundry-system-main/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/herland-laundry-system.git
+git clone -b main --single-branch https://github.com/ilsu-vc/herland-laundry-system.git
 cd herland-laundry-system-main
 ```
 
@@ -46,18 +46,22 @@ cd herland-laundry-system-main
 
 Create `.env` files from the provided templates:
 
+**For Backend:**
 ```bash
-# Backend
 cp herland-laundry-system-backend/.env.example herland-laundry-system-backend/.env
+```
 
-# Frontend
+**For Frontend:**
+```bash
 cp herland-laundry-system-frontend/client/.env.example herland-laundry-system-frontend/client/.env
+```
 
-# Root (only needed for production Docker builds)
+**For Root (production builds only):**
+```bash
 cp .env.example .env
 ```
 
-Fill in the actual values (Supabase keys, Google Maps API key, etc.). Ask the project lead for the credentials.
+> ⚠️ **IMPORTANT:** Fill in the actual values in each `.env` file (Supabase keys, Google Maps API key, etc.). Ask the project lead for the credentials. The system will NOT work without proper environment variables.
 
 > ⚠️ **Never commit `.env` files.** They are already listed in `.gitignore`.
 
@@ -67,6 +71,22 @@ Fill in the actual values (Supabase keys, Google Maps API key, etc.). Ask the pr
 
 ```bash
 docker compose --profile dev up --build
+```
+
+**Wait for these messages in the terminal:**
+
+Backend should show:
+```
+✅ Connection Successful! Database is talking to the Backend.
+🚀 Herland Backend running on http://localhost:5000
+```
+
+Frontend should show:
+```
+VITE v5.x.x  ready in xxx ms
+
+➜  Local:   http://localhost:5173/
+➜  Network: use --host to expose
 ```
 
 | Service  | URL                        |
@@ -105,6 +125,12 @@ npm install
 npm run dev
 ```
 
+You should see:
+```
+✅ Connection Successful! Database is talking to the Backend.
+🚀 Herland Backend running on http://localhost:5000
+```
+
 **Terminal 2 — Frontend:**
 ```bash
 cd herland-laundry-system-frontend/client
@@ -112,7 +138,61 @@ npm install
 npm run dev
 ```
 
+You should see:
+```
+VITE v5.x.x  ready in xxx ms
+
+➜  Local:   http://localhost:5173/
+```
+
 The frontend runs at `http://localhost:5173` and the backend at `http://localhost:5000`.
+
+---
+
+## 🔧 Troubleshooting
+
+### Service rates not loading on landing page
+
+**Symptoms:** The service rates section shows a loading spinner forever or is empty.
+
+**Causes & Solutions:**
+
+1. **Backend not running:** Make sure the backend is running and you see the "✅ Connection Successful!" message.
+
+2. **Wrong API URL:** Check `herland-laundry-system-frontend/client/.env` and ensure:
+   ```
+   VITE_API_URL=http://localhost:5000
+   ```
+   (No `/api/v1` at the end!)
+
+3. **Database not seeded:** The `service_items` table might be empty. Run the `database_migration.sql` script in your Supabase SQL editor.
+
+4. **CORS issues:** If you see CORS errors in the browser console, make sure the backend `.env` has the correct frontend URL allowed.
+
+### No terminal output for backend/frontend
+
+**Symptoms:** After running `docker compose --profile dev up --build`, you don't see the expected "🚀 Herland Backend running..." or Vite messages.
+
+**Solutions:**
+
+1. **Check Docker logs:**
+   ```bash
+   docker compose logs -f backend-dev
+   docker compose logs -f frontend-dev
+   ```
+
+2. **Rebuild from scratch:**
+   ```bash
+   docker compose --profile dev down
+   docker system prune -f
+   docker compose --profile dev up --build
+   ```
+
+3. **Check environment variables:** Make sure all `.env` files are created and filled with valid values.
+
+### Navbar scroll not centering sections
+
+**Fixed in latest version.** The navbar now accounts for the fixed header height when scrolling to sections.
 
 ---
 

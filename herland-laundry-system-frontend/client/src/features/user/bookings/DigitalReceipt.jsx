@@ -268,12 +268,7 @@ export default function DigitalReceipt() {
                 <span className="text-[#6b7280]">Total Amount</span>
                 <span className="font-bold text-[#374151]">₱{Number(total).toFixed(2)}</span>
               </div>
-              {downpayment > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#6b7280]">Downpayment</span>
-                  <span className="font-bold text-[#4bad40]">₱{Number(downpayment).toFixed(2)}</span>
-                </div>
-              )}
+              {/* Downpayment section removed - no longer used */}
               {balance > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6b7280]">Remaining Balance</span>

@@ -7,6 +7,12 @@
 #   Production  (nginx + node): docker compose --profile prod up --build -d
 #   Stop all:                   docker compose --profile dev --profile prod down
 #
+# EXPECTED OUTPUT (Development):
+#   Backend:  "✅ Connection Successful! Database is talking to the Backend."
+#             "🚀 Herland Backend running on http://localhost:5000"
+#   Frontend: "VITE v5.x.x  ready in xxx ms"
+#             "➜  Local:   http://localhost:5173/"
+#
 # =============================================================
 
 # ---------------------------------------------------------------

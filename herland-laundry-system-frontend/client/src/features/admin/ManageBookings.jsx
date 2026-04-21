@@ -214,6 +214,9 @@ export default function ManageBookings() {
   const [saveSuccess, setSaveSuccess] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
 
   const { isLoaded: isMapLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -278,6 +281,13 @@ export default function ManageBookings() {
   const toggleExpand = (id) => setExpandedId(expandedId === id ? null : id);
 
   const applyAction = async (bookingId, actionLabel) => {
+    // Special handling for Cancel Booking - show modal first
+    if (actionLabel === "Cancel Booking") {
+      setCancellingBookingId(bookingId);
+      setShowCancelModal(true);
+      return;
+    }
+
     const effect = ACTION_EFFECTS[actionLabel];
     if (!effect) return;
 
@@ -349,6 +359,64 @@ export default function ManageBookings() {
     } catch (error) {
       console.error('Failed to persist status update:', error);
     }
+  };
+
+  const handleCancelWithReason = async () => {
+    if (!cancelReason.trim()) {
+      return; // Don't proceed without a reason
+    }
+
+    const bookingId = cancellingBookingId;
+    const effect = ACTION_EFFECTS["Cancel Booking"];
+    const currentBooking = bookings.find((booking) => booking.id === bookingId);
+
+    // Build the updated timeline for the API call
+    const updatedTimeline = [
+      ...(currentBooking?.timeline || []),
+      { status: effect.status, timestamp: new Date().toISOString() },
+    ];
+
+    // Update local state immediately for responsive UI
+    setBookings((prev) =>
+      prev.map((booking) => {
+        if (booking.id !== bookingId) return booking;
+
+        return {
+          ...booking,
+          timeline: updatedTimeline,
+          stage: effect.nextStage,
+          cancellationReason: cancelReason.trim(), // Store the reason locally
+        };
+      })
+    );
+
+    // Persist to database via backend with cancellation reason
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const dbId = currentBooking?.dbId || bookingId;
+
+      await fetch(`${API_BASE}/bookings/${dbId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          status: effect.status,
+          nextStage: effect.nextStage,
+          timeline: updatedTimeline,
+          cancellationReason: cancelReason.trim(),
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to persist cancellation:', error);
+    }
+
+    // Close modal and reset state
+    setShowCancelModal(false);
+    setCancelReason("");
+    setCancellingBookingId(null);
   };
 
   const undoStatus = async (bookingId) => {
@@ -705,6 +773,14 @@ export default function ManageBookings() {
                   </svg>
                 </button>
                 <h1 className="text-2xl font-semibold">Booking Details</h1>
+                <div className="ml-auto">
+                  <button
+                    onClick={() => window.open(`/book?edit=${selectedBooking.id}`, '_blank')}
+                    className="rounded-lg border border-[#3878c2] px-3 py-1.5 text-sm font-medium text-[#3878c2] hover:bg-[#3878c2]/5 transition"
+                  >
+                    Edit Booking
+                  </button>
+                </div>
               </header>
 
               <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -767,10 +843,6 @@ export default function ManageBookings() {
                     <div>
                       <p className="text-xs font-semibold text-[#3878c2]">Add-ons</p>
                       <p className="mt-1 text-sm text-[#374151]">{addonList.length ? addonList.join(", ") : "-"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#3878c2]">Laundry Weight</p>
-                      <p className="mt-1 text-sm text-[#374151]">{weight ? `${weight} kg` : "-"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-[#3878c2]">Collection Mode</p>
@@ -955,6 +1027,49 @@ export default function ManageBookings() {
           </div>
         );
       })()}
+
+      {/* Cancellation Reason Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-[#3878c2]">
+              Cancel Booking
+            </h3>
+            <p className="mb-4 text-sm text-[#374151]">
+              Please provide a reason for cancelling this booking. This will be shown to the customer.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Enter cancellation reason (e.g., Failed payment verification, Service unavailable, etc.)"
+              className="w-full rounded-xl border border-[#d9e8fb] p-3 text-sm focus:border-[#3878c2] focus:ring-1 focus:ring-[#3878c2] outline-none min-h-[100px] resize-none"
+              maxLength={500}
+            />
+            <div className="mt-1 text-xs text-[#b4b4b4] text-right">
+              {cancelReason.length}/500 characters
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason("");
+                  setCancellingBookingId(null);
+                }}
+                className="flex-1 rounded-lg border border-[#b4b4b4] px-4 py-2 text-sm font-medium text-[#374151] hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCancelWithReason}
+                disabled={!cancelReason.trim()}
+                className="flex-1 rounded-lg bg-[#e55353] px-4 py-2 text-sm font-medium text-white hover:bg-[#d44444] disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNavbar />
     </div>
