@@ -15,3 +15,7 @@ AI_INSTRUCTIONS.md
 Copy of SE2 Team Vybe.txt
 tmp_debug_mapping.js
 *tmp_debug_mapping.js
+# Database & Migration Scripts
+database_migration.sql
+fix_user_deletion.sql
+*.sql

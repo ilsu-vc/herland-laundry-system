@@ -135,7 +135,19 @@ router.delete('/users/:id', verifyRole('Admin'), async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Delete profile first
+        // 0. Selective Cleanup (Preserve Transaction Records)
+        // We only delete notifications, as these aren't critical for business audits.
+        // Bookings and Storage files are preserved (handled by SET NULL in the DB).
+        await supabase.from('notifications').delete().eq('user_id', id);
+
+        // 1. Delete from auth.users
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+        if (authError) {
+            console.error('CRITICAL: Auth delete error for ID:', id, authError);
+            throw authError;
+        }
+
+        // 2. Delete profile only after auth user is gone
         const { error: profileError } = await supabase
             .from('profiles')
             .delete()
@@ -143,16 +155,19 @@ router.delete('/users/:id', verifyRole('Admin'), async (req, res) => {
 
         if (profileError) {
             console.error('Profile delete warning:', profileError.message);
+            // We don't necessarily throw here if auth is already gone, 
+            // but logging it is important.
         }
 
-        // Delete from auth.users
-        const { error: authError } = await supabase.auth.admin.deleteUser(id);
-        if (authError) throw authError;
-
-        res.json({ message: 'User deleted successfully' });
+        res.json({ message: 'User deleted successfully across the system' });
     } catch (error) {
-        console.error('Delete User Error:', error.message);
-        res.status(500).json({ error: 'Failed to delete user' });
+        console.error('Delete User Error:', error);
+        res.status(500).json({ 
+            error: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+        });
     }
 });
 
