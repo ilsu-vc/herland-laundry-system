@@ -439,29 +439,45 @@ export default function ManageServices() {
     if (!question || !answer) return;
 
     try {
+      const isDefaultFaq = editingFaqId && String(editingFaqId).startsWith('faq-');
       const authHeaders = await getAuthHeaders();
       const response = await fetch(`${API_BASE}/services/faqs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          id: editingFaqId || undefined,
+          id: isDefaultFaq ? undefined : (editingFaqId || undefined),
           question,
           answer,
         }),
       });
 
       if (editingFaqId) {
-        setFaqs((prev) =>
-          prev.map((faq) =>
-            faq.id === editingFaqId
-              ? {
-                  ...faq,
-                  question,
-                  answer,
-                }
-              : faq
-          )
-        );
+        if (isDefaultFaq) {
+          let newId = editingFaqId;
+          if (response.ok) {
+            const data = await response.json();
+            if (data.id) newId = data.id;
+          }
+          setFaqs((prev) =>
+            prev.map((faq) =>
+              faq.id === editingFaqId
+                ? { ...faq, id: newId, question, answer }
+                : faq
+            )
+          );
+        } else {
+          setFaqs((prev) =>
+            prev.map((faq) =>
+              faq.id === editingFaqId
+                ? {
+                    ...faq,
+                    question,
+                    answer,
+                  }
+                : faq
+            )
+          );
+        }
       } else {
         let newId = `faq-${Date.now()}`;
         if (response.ok) {

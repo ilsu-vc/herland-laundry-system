@@ -226,14 +226,13 @@ export default function Signup() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Phone Number</label>
                 <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#3878c2]/50 focus-within:border-[#3878c2] transition-all">
-                  <div className="flex items-center text-[#3878c2] font-bold mr-3 pr-3 border-r border-gray-300">+63</div>
                   <input
                     type="tel"
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="912 345 6789"
+                    placeholder="0912 345 6789"
                     maxLength={11}
                     className="w-full bg-transparent outline-none text-gray-900 font-medium placeholder-gray-400"
                   />

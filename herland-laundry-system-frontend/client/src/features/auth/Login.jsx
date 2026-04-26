@@ -20,11 +20,12 @@ export default function Login() {
     }
 
     if (mode === 'mobile') {
-      const phMobileRegex = /^9\d{9}$/;
+      let cleanPhone = value.replace(/\D/g, '');
+      const isValidMobile = /^09\d{9}$/.test(cleanPhone);
       setWarning(
-        phMobileRegex.test(value)
+        isValidMobile
           ? ''
-          : 'Please enter a valid Philippine mobile number'
+          : 'Please enter a valid Philippine mobile number (e.g., 09123456789)'
       );
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,9 +42,12 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    // Build the identifier: phone numbers need the +63 prefix for Supabase
-    const identifier =
-      mode === 'mobile' ? `+63${value}` : value;
+    let identifier = value;
+    if (mode === 'mobile') {
+        let cleanPhone = value.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+        identifier = '+' + cleanPhone;
+    }
 
     try {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -145,11 +149,6 @@ export default function Login() {
                   {mode === 'mobile' ? 'Mobile Number' : 'Email Address'}
                 </label>
                 <div className={`flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 sm:py-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#3878c2]/50 focus-within:border-[#3878c2] transition-all ${warning ? 'border-red-300 ring-4 ring-red-50 bg-red-50/50' : ''}`}>
-                  {mode === 'mobile' && (
-                    <div className="flex items-center text-[#3878c2] font-bold mr-3 pr-3 border-r border-gray-300">
-                      +63
-                    </div>
-                  )}
                   <input
                     type={mode === 'mobile' ? 'tel' : 'email'}
                     value={value}
@@ -157,11 +156,12 @@ export default function Login() {
                       let val = e.target.value;
                       if (mode === 'mobile') {
                         val = val.replace(/\D/g, '');
-                        if (val.length > 10) val = val.slice(0, 10);
+                        if (val.length > 11) val = val.slice(0, 11);
                       }
                       setValue(val);
                     }}
-                    placeholder={mode === 'mobile' ? '912 345 6789' : 'name@example.com'}
+                    placeholder={mode === 'mobile' ? '0912 345 6789' : 'name@example.com'}
+                    maxLength={mode === 'mobile' ? 11 : undefined}
                     className="w-full bg-transparent outline-none text-gray-900 font-medium placeholder-gray-400"
                   />
                 </div>

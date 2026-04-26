@@ -24,11 +24,10 @@ router.post('/register', async (req, res) => {
         } else if (phone) {
             // If no email, try phone. Supabase requires E.164 format (e.g., +639...)
             // Assuming input is 09xxxxxxxxx, convert to +639xxxxxxxxx
-            let formattedPhone = phone.replace(/^0/, '+63');
-            if (!formattedPhone.startsWith('+')) {
-                formattedPhone = `+${formattedPhone}`; // Fallback/Safety
-            }
-            signUpOptions.phone = formattedPhone;
+            let cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+            else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;
+            signUpOptions.phone = '+' + cleanPhone;
         } else {
             return res.status(400).json({ error: 'Email or Phone Number is required.' });
         }
@@ -68,8 +67,10 @@ router.post('/forgot-password', async (req, res) => {
             return res.status(200).json({ message: 'Password reset link sent to your email.' });
         } else if (phone) {
             // For phone, we send an OTP
-            let formattedPhone = phone.replace(/^0/, '+63');
-            if (!formattedPhone.startsWith('+')) formattedPhone = `+${formattedPhone}`;
+            let cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+            else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;
+            let formattedPhone = '+' + cleanPhone;
             
             const { error } = await supabase.auth.signInWithOtp({
                 phone: formattedPhone,

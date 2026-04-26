@@ -45,7 +45,32 @@ router.get('/services', async (req, res) => {
                 estimatedHours: i.estimated_hours != null ? Number(i.estimated_hours) : 0,
             }));
 
-        res.json({ services, addOns, schedule: scheduleRows?.[0] || null });
+        let { data: faqs, error: faqsError } = await supabase
+            .from('faqs')
+            .select('*')
+            .order('sort_order', { ascending: true });
+
+        // If no FAQs, use fallback
+        if (faqsError || !faqs || faqs.length === 0) {
+            faqs = [
+                { id: 'faq-1', question: 'What are your operating hours?', answer: 'We are open Monday to Saturday, from 8:00AM to 5:00PM. Bookings placed outside these hours will be processed the next business day.', sort_order: 1 },
+                { id: 'faq-2', question: 'What types of services do you offer?', answer: 'We offer Wash, Dry, and Fold services.', sort_order: 2 },
+                { id: 'faq-3', question: 'Do you offer pick up and delivery services?', answer: 'Yes! We provide convenient pick-up and delivery services. Just place a booking through our app.', sort_order: 3 },
+                { id: 'faq-4', question: 'What payment methods are accepted?', answer: 'For drop-off bookings at our laundry shop, we accept cash or GCash. For online bookings, we accept GCash only.', sort_order: 4 },
+                { id: 'faq-5', question: 'Do I need to register to book a service?', answer: 'Yes, registration is required to book a service.', sort_order: 5 },
+                { id: 'faq-6', question: 'When will my laundry be ready?', answer: 'Bookings placed during operating hours are usually completed within the same day. Bookings placed after 5:00 PM will be processed the next business day.', sort_order: 6 },
+                { id: 'faq-7', question: 'Can I change my account details?', answer: 'Yes! You can update your name, contact number, password, and saved address at any time in the Profile tab.', sort_order: 7 },
+                { id: 'faq-8', question: 'I forgot my password, what should I do?', answer: "Tap 'Forgot Password' on the login screen. Enter your email or mobile number to receive a reset link or code, then follow the instructions to set a new password.", sort_order: 8 }
+            ];
+        }
+
+        const formattedFaqs = faqs.map(f => ({
+            id: f.id,
+            question: f.question,
+            answer: f.answer
+        }));
+
+        res.json({ services, addOns, schedule: scheduleRows?.[0] || null, faqs: formattedFaqs });
     } catch (error) {
         console.error('Fetch Services Error:', error.message);
         res.status(500).json({ error: 'Failed to fetch services' });
@@ -375,12 +400,20 @@ router.get('/profile', requireAuth, async (req, res) => {
 
         if (error) throw error;
 
+        let displayPhone = req.user.phone || profile?.phone_number || '';
+        if (displayPhone) {
+            let clean = displayPhone.replace(/\D/g, '');
+            if (clean.startsWith('63')) clean = '0' + clean.substring(2);
+            else if (clean.length === 10 && clean.startsWith('9')) clean = '0' + clean;
+            displayPhone = clean;
+        }
+
         res.json({
             id: req.user.id,
             email: req.user.email,
-            phone: req.user.phone, // Auth phone
+            phone: displayPhone, // Auth phone
             full_name: profile?.full_name || '',
-            profile_phone: profile?.phone_number || '', // Profile table phone
+            profile_phone: displayPhone, // Profile table phone
             role: profile?.role || 'Customer',
             avatar_url: profile?.avatar_url || null,
             address: profile?.address || '',
@@ -421,12 +454,12 @@ router.put('/profile', requireAuth, async (req, res) => {
         
         // If updating phone in auth, convert to E.164
         if (phone) {
-            let e164Phone = String(phone);
-            if (e164Phone.startsWith('0')) {
-                e164Phone = '+63' + e164Phone.substring(1);
-            }
-            if (e164Phone.startsWith('+')) {
-                authUpdate.phone = e164Phone;
+            let cleanPhone = String(phone).replace(/\D/g, '');
+            if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+            else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;
+            
+            if (cleanPhone.startsWith('63')) {
+                authUpdate.phone = '+' + cleanPhone;
             }
         }
 

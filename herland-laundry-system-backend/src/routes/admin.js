@@ -52,10 +52,18 @@ router.get('/users', verifyRole('Admin'), async (req, res) => {
         // Merge auth users with their profiles
         const mergedUsers = authUsers.map(authUser => {
             const profile = profiles.find(p => p.id === authUser.id) || {};
+            let displayPhone = authUser.phone || profile.phone_number || '';
+            if (displayPhone) {
+                let clean = displayPhone.replace(/\D/g, '');
+                if (clean.startsWith('63')) clean = '0' + clean.substring(2);
+                else if (clean.length === 10 && clean.startsWith('9')) clean = '0' + clean;
+                displayPhone = clean;
+            }
+
             return {
                 id: authUser.id,
                 email: authUser.email || null,
-                phone: authUser.phone || profile.phone_number || null,
+                phone: displayPhone || null,
                 full_name: profile.full_name || null,
                 role: profile.role || 'Customer',
                 address: profile.address || null,
@@ -103,14 +111,12 @@ router.put('/users/:id/role', verifyRole('Admin'), async (req, res) => {
 
             // Convert phone to E.164 format for Supabase auth
             if (phone !== undefined && phone) {
-                let e164Phone = phone;
-                // Philippine format: 09xx -> +639xx
-                if (e164Phone.startsWith('0')) {
-                    e164Phone = '+63' + e164Phone.substring(1);
-                }
-                // Only update auth if phone is in E.164 format
-                if (e164Phone.startsWith('+')) {
-                    authUpdate.phone = e164Phone;
+                let cleanPhone = String(phone).replace(/\D/g, '');
+                if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+                else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;
+                
+                if (cleanPhone.startsWith('63')) {
+                    authUpdate.phone = '+' + cleanPhone;
                 }
             }
 
@@ -548,6 +554,30 @@ router.get('/services/faqs', verifyRole('Admin'), async (req, res) => {
             .order('sort_order', { ascending: true });
 
         if (error) throw error;
+
+        if (!faqs || faqs.length === 0) {
+            const defaultFaqs = [
+                { question: 'What are your operating hours?', answer: 'We are open Monday to Saturday, from 8:00AM to 5:00PM. Bookings placed outside these hours will be processed the next business day.', sort_order: 1 },
+                { question: 'What types of services do you offer?', answer: 'We offer Wash, Dry, and Fold services.', sort_order: 2 },
+                { question: 'Do you offer pick up and delivery services?', answer: 'Yes! We provide convenient pick-up and delivery services. Just place a booking through our app.', sort_order: 3 },
+                { question: 'What payment methods are accepted?', answer: 'For drop-off bookings at our laundry shop, we accept cash or GCash. For online bookings, we accept GCash only.', sort_order: 4 },
+                { question: 'Do I need to register to book a service?', answer: 'Yes, registration is required to book a service.', sort_order: 5 },
+                { question: 'When will my laundry be ready?', answer: 'Bookings placed during operating hours are usually completed within the same day. Bookings placed after 5:00 PM will be processed the next business day.', sort_order: 6 },
+                { question: 'Can I change my account details?', answer: 'Yes! You can update your name, contact number, password, and saved address at any time in the Profile tab.', sort_order: 7 },
+                { question: 'I forgot my password, what should I do?', answer: "Tap 'Forgot Password' on the login screen. Enter your email or mobile number to receive a reset link or code, then follow the instructions to set a new password.", sort_order: 8 }
+            ];
+            
+            const { data: inserted, error: insertErr } = await supabase.from('faqs').insert(defaultFaqs).select('*');
+            
+            if (!insertErr && inserted) {
+                return res.json(inserted.map(f => ({
+                    id: f.id,
+                    question: f.question,
+                    answer: f.answer,
+                    sortOrder: f.sort_order
+                })));
+            }
+        }
 
         const mapped = (faqs || []).map(f => ({
             id: f.id,

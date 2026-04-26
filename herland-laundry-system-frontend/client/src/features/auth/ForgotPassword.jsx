@@ -19,11 +19,12 @@ export default function ForgotPassword() {
     }
 
     if (mode === 'mobile') {
-      const phMobileRegex = /^9\d{9}$/;
+      let cleanPhone = value.replace(/\D/g, '');
+      const isValidMobile = /^09\d{9}$/.test(cleanPhone);
       setWarning(
-        phMobileRegex.test(value)
+        isValidMobile
           ? ''
-          : 'Please enter a valid Philippine mobile number'
+          : 'Please enter a valid Philippine mobile number (e.g., 09123456789)'
       );
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,7 +42,12 @@ export default function ForgotPassword() {
     setError('');
     setMessage('');
 
-    const identifier = mode === 'mobile' ? `+63${value}` : value;
+    let identifier = value;
+    if (mode === 'mobile') {
+        let cleanPhone = value.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+        identifier = '+' + cleanPhone;
+    }
 
     try {
       const { error: resetError } = mode === 'email' 
@@ -109,12 +115,6 @@ export default function ForgotPassword() {
 
           <form onSubmit={handleSubmit}>
             <div className="flex items-center border border-[#3878c2] rounded px-3 py-2 mb-3">
-              {mode === 'mobile' && (
-                <div className="flex items-center mr-3">
-                  <span className="text-[#3878c2] text-sm font-semibold select-none">+63</span>
-                  <span className="mx-2 h-5 w-px bg-[#3878c2]" />
-                </div>
-              )}
               <input
                 type={mode === 'mobile' ? 'tel' : 'email'}
                 value={value}
@@ -122,11 +122,12 @@ export default function ForgotPassword() {
                   let val = e.target.value;
                   if (mode === 'mobile') {
                     val = val.replace(/\D/g, '');
-                    if (val.length > 10) val = val.slice(0, 10);
+                    if (val.length > 11) val = val.slice(0, 11);
                   }
                   setValue(val);
                 }}
-                placeholder={mode === 'mobile' ? 'Enter mobile number' : 'Enter email address'}
+                placeholder={mode === 'mobile' ? '0912 345 6789' : 'Enter email address'}
+                maxLength={mode === 'mobile' ? 11 : undefined}
                 className="w-full outline-none bg-white text-sm font-semibold text-[#3878c2] placeholder-[#b4b4b4]"
               />
             </div>

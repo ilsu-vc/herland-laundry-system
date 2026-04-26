@@ -22,14 +22,22 @@ export default function BookNow() {
   const editId = searchParams.get("edit");
   const isEditMode = !!editId;
   
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => {
+    if (isEditMode) return 1;
+    const saved = localStorage.getItem('bookingStep');
+    return saved ? parseInt(saved, 10) : 1;
+  });
 
-  // Save booking state to localStorage (simplified approach)
-  useEffect(() => {
-    if (!isEditMode) {
-      localStorage.setItem('bookingStep', step.toString());
+  // Helper to read JSON from localStorage
+  const getLocalItem = (key, defaultVal) => {
+    if (isEditMode) return defaultVal;
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultVal;
+    } catch {
+      return defaultVal;
     }
-  }, [step, isEditMode]);
+  };
 
   // Clear localStorage when booking is completed successfully
   const clearBookingState = () => {
@@ -58,33 +66,67 @@ export default function BookNow() {
     checkAuth();
   }, [navigate, showToast]);
 
-  const [services, setServices] = useState({});
-  const [addons, setAddons] = useState({});
-  const [weight, setWeight] = useState(0);
+  const [services, setServices] = useState(() => getLocalItem('bookingServices', {}));
+  const [addons, setAddons] = useState(() => getLocalItem('bookingAddons', {}));
+  const [weight, setWeight] = useState(() => {
+    if (isEditMode) return 0;
+    const saved = localStorage.getItem('bookingWeight');
+    return saved ? parseFloat(saved) : 0;
+  });
   const [availableServices, setAvailableServices] = useState([]);
   const [availableAddons, setAvailableAddons] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState("gcash");
-  const [numberOfBags, setNumberOfBags] = useState(1);
-  const [bagDescription, setBagDescription] = useState("");
-  const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState(() => {
+    if (isEditMode) return "gcash";
+    return localStorage.getItem('bookingPaymentMethod') || "gcash";
+  });
+  const [numberOfBags, setNumberOfBags] = useState(() => {
+    if (isEditMode) return 1;
+    const saved = localStorage.getItem('bookingNumberOfBags');
+    return saved ? parseInt(saved, 10) : 1;
+  });
+  const [bagDescription, setBagDescription] = useState(() => {
+    if (isEditMode) return "";
+    return localStorage.getItem('bookingBagDescription') || "";
+  });
+  const [notes, setNotes] = useState(() => {
+    if (isEditMode) return "";
+    return localStorage.getItem('bookingNotes') || "";
+  });
   const { setHideBottomNav } = useLayout();
   const { requestLocationPermission } = usePermissions();
-  const [collectionInfo, setCollectionInfo] = useState({
+  const [collectionInfo, setCollectionInfo] = useState(() => getLocalItem('bookingCollectionInfo', {
     option: "dropOffPickUpLater",
     optionLabel: "Drop-off & Pick up later",
     date: "",
     time: "",
-  });
-  const [deliveryInfo, setDeliveryInfo] = useState({
+  }));
+  const [deliveryInfo, setDeliveryInfo] = useState(() => getLocalItem('bookingDeliveryInfo', {
     date: "",
     time: "",
-  });
-  const [customerLocation, setCustomerLocation] = useState({
+  }));
+  const [customerLocation, setCustomerLocation] = useState(() => getLocalItem('bookingCustomerLocation', {
     address: "",
     lat: null,
     lng: null
-  });
+  }));
+
+  // Save all booking state to localStorage
+  useEffect(() => {
+    if (!isEditMode) {
+      localStorage.setItem('bookingStep', step.toString());
+      localStorage.setItem('bookingServices', JSON.stringify(services));
+      localStorage.setItem('bookingAddons', JSON.stringify(addons));
+      localStorage.setItem('bookingWeight', weight.toString());
+      localStorage.setItem('bookingPaymentMethod', paymentMethod);
+      localStorage.setItem('bookingNumberOfBags', numberOfBags.toString());
+      localStorage.setItem('bookingBagDescription', bagDescription);
+      localStorage.setItem('bookingNotes', notes);
+      localStorage.setItem('bookingCollectionInfo', JSON.stringify(collectionInfo));
+      localStorage.setItem('bookingDeliveryInfo', JSON.stringify(deliveryInfo));
+      localStorage.setItem('bookingCustomerLocation', JSON.stringify(customerLocation));
+    }
+  }, [step, services, addons, weight, paymentMethod, numberOfBags, bagDescription, notes, collectionInfo, deliveryInfo, customerLocation, isEditMode]);
   const [saveHomeAddress, setSaveHomeAddress] = useState(true);
 
   const { isLoaded: isMapLoaded } = useJsApiLoader({
@@ -106,13 +148,23 @@ export default function BookNow() {
           
           // Initialize state if not in edit mode
           if (!isEditMode) {
-            const initialServices = {};
-            data.services.forEach(s => initialServices[s.name.toLowerCase()] = 0);
-            setServices(initialServices);
+            setServices(prev => {
+              const newServices = { ...prev };
+              data.services.forEach(s => {
+                const key = s.name.toLowerCase();
+                if (newServices[key] === undefined) newServices[key] = 0;
+              });
+              return newServices;
+            });
 
-            const initialAddons = {};
-            data.addOns.forEach(a => initialAddons[a.name.toLowerCase()] = 0);
-            setAddons(initialAddons);
+            setAddons(prev => {
+              const newAddons = { ...prev };
+              data.addOns.forEach(a => {
+                const key = a.name.toLowerCase();
+                if (newAddons[key] === undefined) newAddons[key] = 0;
+              });
+              return newAddons;
+            });
           }
         }
       } catch (err) {
@@ -136,10 +188,13 @@ export default function BookNow() {
             if (response.ok) {
               const profile = await response.json();
               if (profile.lat && profile.lng) {
-                setCustomerLocation({
-                  address: profile.address || "",
-                  lat: profile.lat,
-                  lng: profile.lng,
+                setCustomerLocation(prev => {
+                  if (prev.lat) return prev; // Do not overwrite if we already have location from local storage
+                  return {
+                    address: profile.address || "",
+                    lat: profile.lat,
+                    lng: profile.lng,
+                  };
                 });
               }
             }
@@ -419,6 +474,7 @@ export default function BookNow() {
             isEditMode={isEditMode}
             editId={editId}
             saveHomeAddress={saveHomeAddress}
+            clearBookingState={clearBookingState}
           />
         )}
       </div>
@@ -572,6 +628,7 @@ function StepSelectServices({
             value={numberOfBags}
             onChange={setNumberOfBags}
             allowDecimal={false}
+            minValue={1}
           />
         </div>
 
@@ -646,7 +703,7 @@ function StepSelectServices({
 /* =========================
    Reusable Components
 ========================= */
-function QuantityInput({ value, onChange, allowDecimal }) {
+function QuantityInput({ value, onChange, allowDecimal, minValue = 0 }) {
   const handleChange = (e) => {
     let val = e.target.value;
 
@@ -670,7 +727,7 @@ function QuantityInput({ value, onChange, allowDecimal }) {
 
   const handleBlur = () => {
     let num = parseFloat(value);
-    if (isNaN(num) || num < 0) num = 0;
+    if (isNaN(num) || num < minValue) num = minValue;
 
     if (allowDecimal) {
       num = Math.round(num * 10) / 10;
@@ -691,7 +748,7 @@ function QuantityInput({ value, onChange, allowDecimal }) {
   const handleDecrement = () => {
     let num = parseFloat(value) || 0;
     num -= 1;
-    if (num < 0) num = 0;
+    if (num < minValue) num = minValue;
     if (allowDecimal) num = Math.floor(num * 10) / 10;
     onChange(num);
   };
@@ -700,9 +757,9 @@ function QuantityInput({ value, onChange, allowDecimal }) {
     <div className="flex items-center max-w-[8rem]">
       <button
         onClick={handleDecrement}
-        disabled={parseFloat(value) <= 0 || value === ""}
+        disabled={parseFloat(value) <= minValue || value === ""}
         className={`px-3 h-10 border rounded-l ${
-          parseFloat(value) <= 0 || value === "" ? "opacity-40 cursor-not-allowed" : ""
+          parseFloat(value) <= minValue || value === "" ? "opacity-40 cursor-not-allowed" : ""
         }`}
         style={{ borderColor: "#3878c2", color: "#3878c2" }}
       >
@@ -1285,6 +1342,7 @@ function StepReview({
   isEditMode,
   editId,
   saveHomeAddress,
+  clearBookingState,
 }) {
   const navigate = useNavigate();
   const { showToast } = useToast();

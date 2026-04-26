@@ -92,6 +92,7 @@ export default function LandingPage() {
   const [openRate, setOpenRate] = useState(null);
   const [isWideDesktop, setIsWideDesktop] = useState(false);
   const [dynamicRates, setDynamicRates] = useState([]);
+  const [fetchedFaqs, setFetchedFaqs] = useState(defaultFaqs);
   const [loadingRates, setLoadingRates] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
@@ -139,6 +140,10 @@ export default function LandingPage() {
             }
           ];
           setDynamicRates(formatted);
+
+          if (data.faqs && data.faqs.length > 0) {
+            setFetchedFaqs(data.faqs);
+          }
         }
       } catch (err) {
         console.error('Error fetching rates for landing:', err);
@@ -291,9 +296,9 @@ export default function LandingPage() {
         </h2>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
-          {defaultFaqs.map((faq, index) => (
+          {fetchedFaqs.map((faq, index) => (
             <div
-              key={faq.id}
+              key={faq.id || index}
               className={`h-fit self-start rounded-xl border border-[#3878c2] p-4 transition-all ${
                 openFaq === index ? 'bg-[#63bce6]/10' : ''
               }`}

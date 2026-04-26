@@ -19,6 +19,7 @@ export default function PaymentForm() {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 	const [error, setError] = useState('');
+	const [isAgreed, setIsAgreed] = useState(false);
 
 	const fetchBookingDetails = useCallback(async () => {
 		if (!bookingReference) return;
@@ -70,7 +71,7 @@ export default function PaymentForm() {
 		[referenceNumber]
 	);
 
-	const canSubmit = isValidReference && !submitting;
+	const canSubmit = isValidReference && !submitting && isAgreed;
 
 	const formattedAmount =
 		typeof amountToPay === 'number' && amountToPay > 0
@@ -179,13 +180,25 @@ export default function PaymentForm() {
 						) : null}
 					</div>
 
+					<div className="flex flex-col items-center my-4">
+						<p className="text-sm font-semibold text-[#3878c2] mb-2">Scan to Pay via GCash</p>
+						<img src="/images/gcash-qr.png" alt="GCash QR Code" className="w-48 h-auto border-2 border-[#3878c2] rounded-lg p-2" />
+					</div>
 					<p className="text-sm font-semibold text-[#3878c2]">
-						Please send your payment screenshot via Viber: <a href="viber://chat?number=%2B639123456789" className="underline hover:text-[#4bad40]">09123456789</a>
+						Please send your payment screenshot via Viber: <a href="viber://chat?number=%2B639272276218" className="underline hover:text-[#4bad40]">09272276218</a>
 					</p>
-					<p className="text-sm font-semibold text-[#4bad40]">
-						I understand that my booking will only be processed once payment is
-						verified.
-					</p>
+					<label className="flex items-start gap-2 cursor-pointer mt-4 mb-2">
+						<input 
+							type="checkbox" 
+							checked={isAgreed} 
+							onChange={(e) => setIsAgreed(e.target.checked)} 
+							className="mt-1 cursor-pointer shrink-0 accent-[#4bad40] w-4 h-4 rounded border-gray-300 bg-white" 
+						/>
+						<span className="text-sm font-semibold text-[#4bad40] select-none">
+							I understand that my booking will only be processed once payment is
+							verified.
+						</span>
+					</label>
 
 					<button
 						type="submit"
