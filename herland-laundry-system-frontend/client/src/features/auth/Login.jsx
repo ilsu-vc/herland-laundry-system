@@ -50,11 +50,14 @@ export default function Login() {
     }
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: mode === 'email' ? identifier : undefined,
-        phone: mode === 'mobile' ? identifier : undefined,
-        password,
-      });
+      let signInOptions = { password };
+      if (mode === 'email') {
+          signInOptions.email = identifier;
+      } else {
+          signInOptions.phone = identifier;
+      }
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword(signInOptions);
 
       if (signInError) {
         setError(signInError.message);

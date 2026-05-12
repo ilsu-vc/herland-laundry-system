@@ -87,8 +87,21 @@ app.post('/api/v1/auth/register', async (req, res) => {
 
 // 2. Login
 app.post('/api/v1/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { email, phone, password } = req.body;
+    let signInOptions = { password };
+    
+    if (email) {
+        signInOptions.email = email;
+    } else if (phone) {
+        let cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+        else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;
+        signInOptions.phone = '+' + cleanPhone;
+    } else {
+        return res.status(400).json({ error: 'Email or Phone Number is required.' });
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
     if (error) return res.status(401).json({ error: error.message });
     res.status(200).json({ token: data.session.access_token, user: data.user });
 });
