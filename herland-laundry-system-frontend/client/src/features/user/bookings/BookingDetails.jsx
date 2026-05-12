@@ -619,7 +619,7 @@ export default function BookingDetails() {
                       value={feedbackComment}
                       onChange={(e) => setFeedbackComment(e.target.value)}
                       placeholder="Share your thoughts (optional)..."
-                      className="w-full rounded-xl border border-[#d9e8fb] p-3 text-sm focus:border-[#3878c2] focus:ring-1 focus:ring-[#3878c2] outline-none min-h-[100px]"
+                      className="w-full rounded-xl border border-[#d9e8fb] bg-white text-[#374151] p-3 text-sm focus:border-[#3878c2] focus:ring-1 focus:ring-[#3878c2] outline-none min-h-[100px]"
                     />
 
                     <button

@@ -194,7 +194,9 @@ export default function ManageUsers() {
         setCustomers((prev) => prev.filter((c) => c.id !== id));
         if (expandedId === id) setExpandedId(null);
       } else {
-        showToast('Failed to delete user.', 'error');
+        const errorData = await response.json().catch(() => ({}));
+        const fullMsg = `${errorData.error || ''} ${errorData.details || ''} ${errorData.hint || ''}`.trim();
+        showToast(`Failed: ${fullMsg || 'Internal Server Error'}`, 'error');
       }
     } catch (error) {
       console.error('Error deleting user:', error);

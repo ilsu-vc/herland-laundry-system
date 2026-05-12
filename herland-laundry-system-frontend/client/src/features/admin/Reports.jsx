@@ -301,12 +301,13 @@ export default function Reports() {
     };
     const outcomeMap = { Success: 0, Failure: 0 };
 
+    // Step 1: Bucket the counts
     displayBookings.forEach((booking) => {
       const createdAt = getBookingCreatedAt(booking);
       if (createdAt) {
         const key =
           timeframe === 'daily'
-            ? createdAt.toISOString().slice(0, 10)
+            ? createdAt.toISOString().slice(0, 10) // Same time bucketing as Volume
             : timeframe === 'weekly'
               ? getWeekLabel(createdAt)
               : `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
@@ -322,44 +323,55 @@ export default function Reports() {
       const customerName = booking.customerName || 'Walk-in / Unknown';
       customerMap[customerName] = (customerMap[customerName] || 0) + 1;
 
-      const services = getServiceCounts(booking);
+      // 4. Service Mix Distribution
+      const services = getServiceCounts(booking); // Helper to extract wash/dry/fold booleans/ints
       serviceMap.Wash += services.wash;
       serviceMap.Dry += services.dry;
       serviceMap.Fold += services.fold;
 
+      // 5. Add-ons Utilization
       const addons = getAddonCounts(booking);
-      addonsMap.Detergent += addons.detergent;
+      addonsMap.Detergent += addons.detergent; // Note: Logic add +2 units per item
       addonsMap.Conditioner += addons.conditioner;
 
-      const paymentMode = getPaymentMode(booking);
+      // 6. Payment Method Distribution
+      const paymentMode = getPaymentMode(booking); // Returns "Gcash", "Cash", or "Unknown"
       paymentMap[paymentMode] = (paymentMap[paymentMode] || 0) + 1;
 
+      // 7. Collection / Delivery Distribution
       const optionLabel =
         COLLECTION_OPTION_LABELS[booking.collectionOption] ||
         booking.optionLabel ||
         'Unknown';
       collectionMap[optionLabel] = (collectionMap[optionLabel] || 0) + 1;
 
+      // 8. Preferred Date/Time Peak Windows
       const collectionTimeBucket = bucketTime(booking.collectionDetails?.collectionTime || booking.collectionInfo?.time || booking.collectionTime);
       const deliveryTimeBucket = bucketTime(booking.collectionDetails?.deliveryTime || booking.deliveryInfo?.time || booking.deliveryTime);
       if (collectionTimeBucket) peakWindowsMap[collectionTimeBucket] += 1;
       if (deliveryTimeBucket) peakWindowsMap[deliveryTimeBucket] += 1;
 
-      const outcome = getOutcome(booking);
+      // 9. Booking Sucess vs Failure Rate
+      const outcome = getOutcome(booking); // Helper that checks status and timeline for "Failure"
       outcomeMap[outcome] = (outcomeMap[outcome] || 0) + 1;
     });
 
+    // Step 2: Format for the Chart
+    // 1. Booking Volume Over Time
+    // 1. Booking Volume Over Time
     const bookingVolume = Object.entries(volumeMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, value]) => ({ name, value }));
 
+    // 2. Revenue Trend Over Time
     const revenueTrend = Object.entries(revenueMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, value]) => ({ name, value, isCurrency: true }));
 
+    // 3. Customer Activity (Top 10)
     const customerActivity = Object.entries(customerMap)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10)
+      .sort(([, a], [, b]) => b - a) // Sort by highest count
+      .slice(0, 10)                  // Take top 10
       .map(([name, value]) => ({ name, value }));
 
     return {

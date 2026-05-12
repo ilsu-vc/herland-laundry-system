@@ -642,19 +642,10 @@ router.patch('/my-bookings/:id/feedback', requireAuth, async (req, res) => {
     }
 
     try {
-        // Verify booking belongs to user and is completed
-        const { data: booking, error: fetchError } = await supabase
-            .from('bookings')
-            .select('user_id, status, feedback')
-            .eq('id', id)
-            .single();
+        const booking = await getBookingByIdOrRef(id, req.user.id);
 
-        if (fetchError || !booking) {
+        if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
-        }
-
-        if (booking.user_id !== req.user.id) {
-            return res.status(403).json({ error: 'Unauthorized' });
         }
 
         const terminalStatuses = ['delivered', 'completed', 'Booking Completed'];
@@ -671,7 +662,7 @@ router.patch('/my-bookings/:id/feedback', requireAuth, async (req, res) => {
         const { data, error } = await supabase
             .from('bookings')
             .update({ feedback: feedbackData })
-            .eq('id', id)
+            .eq('id', booking.id)
             .select()
             .single();
 
