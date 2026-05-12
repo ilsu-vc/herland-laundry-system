@@ -44,6 +44,9 @@ app.use('/api/v1/rider', riderRoutes);
 // Mount Customer Routes
 app.use('/api/v1/customer', customerRoutes);
 
+// Mount Auth Routes
+app.use('/api/v1/auth', authRoutes);
+
 // --- Existing API Endpoints (Preserved) ---
 
 // 1. Register

@@ -42,22 +42,36 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    let identifier = value;
-    if (mode === 'mobile') {
-        let cleanPhone = value.replace(/\D/g, '');
-        if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
-        identifier = '+' + cleanPhone;
-    }
-
     try {
-      let signInOptions = { password };
-      if (mode === 'email') {
-          signInOptions.email = identifier;
-      } else {
-          signInOptions.phone = identifier;
+      let emailToAuth = value;
+
+      // If user is logging in with mobile number, look up their email via our backend
+      if (mode === 'mobile') {
+        const cleanPhone = value.replace(/\D/g, '');
+
+        // Call our backend to find the email linked to this phone number
+        const backendUrl = import.meta.env.VITE_API_URL || '';
+        const lookupRes = await fetch(`${backendUrl}/api/v1/auth/lookup-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone }),
+        });
+
+        if (!lookupRes.ok) {
+          const errData = await lookupRes.json().catch(() => ({}));
+          setError(errData.error || 'No account found with this mobile number.');
+          return;
+        }
+
+        const { email } = await lookupRes.json();
+        emailToAuth = email;
       }
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword(signInOptions);
+      // Always authenticate using email
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailToAuth,
+        password,
+      });
 
       if (signInError) {
         setError(signInError.message);

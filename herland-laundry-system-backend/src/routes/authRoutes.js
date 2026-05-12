@@ -117,4 +117,37 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
+// Lookup email by phone number (used by frontend for phone login)
+router.post('/lookup-email', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) return res.status(400).json({ error: 'Phone number is required.' });
+
+        const cleanPhone = phone.replace(/\D/g, '');
+
+        // Find the user profile that has this phone number
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('phone_number', cleanPhone)
+            .maybeSingle();
+
+        if (profileError || !profile) {
+            return res.status(404).json({ error: 'No account found with this mobile number.' });
+        }
+
+        // Use the admin API to get the user's email from auth.users
+        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(profile.id);
+
+        if (authError || !authUser?.user?.email) {
+            return res.status(404).json({ error: 'Unable to find email for this account.' });
+        }
+
+        res.status(200).json({ email: authUser.user.email });
+    } catch (err) {
+        console.error('Lookup Email Error:', err.message);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
