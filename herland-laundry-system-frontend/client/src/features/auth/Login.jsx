@@ -11,6 +11,8 @@ export default function Login() {
   const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Validation
   useEffect(() => {
@@ -175,6 +177,30 @@ export default function Login() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!value || mode !== 'email') return;
+    setResendLoading(true);
+    setResendSuccess(false);
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: value,
+      });
+
+      if (resendError) {
+        setError(`Failed to resend: ${resendError.message}`);
+      } else {
+        setResendSuccess(true);
+        setError('');
+      }
+    } catch (err) {
+      setError('Failed to resend verification email.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Left side: Hero Image */}
@@ -301,6 +327,25 @@ export default function Login() {
               {error && (
                 <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
                     <p className="text-xs sm:text-sm font-semibold text-red-600 text-center">{error}</p>
+                    {error.toLowerCase().includes('email not confirmed') && mode === 'email' && (
+                      <button
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={resendLoading}
+                        className="w-full mt-2 py-2 rounded-lg border border-[#3878c2] text-xs font-bold text-[#3878c2] hover:bg-[#3878c2]/5 transition disabled:opacity-50"
+                      >
+                        {resendLoading ? 'Sending...' : '📧 Resend verification email'}
+                      </button>
+                    )}
+                </div>
+              )}
+
+              {/* Resend Success */}
+              {resendSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <p className="text-xs sm:text-sm font-semibold text-green-700 text-center">
+                    ✅ Verification email sent! Check your inbox (and spam folder).
+                  </p>
                 </div>
               )}
 

@@ -56,12 +56,25 @@ export default function ManageTasks() {
 	useEffect(() => {
 		fetchAll()
 
-		// Auto-refresh every 15 seconds so riders see new dispatched tasks immediately
-		const interval = setInterval(() => {
-			fetchAll()
-		}, 15000)
+		// Auto-refresh every 15 seconds for new dispatched tasks
+		// Pauses when the tab is hidden (e.g. rider is in Google Maps) to save mobile data
+		let interval = setInterval(() => { fetchAll() }, 15000)
 
-		return () => clearInterval(interval)
+		const handleVisibility = () => {
+			if (document.visibilityState === 'visible') {
+				fetchAll() // Refresh immediately when rider returns to the app
+				interval = setInterval(() => { fetchAll() }, 15000)
+			} else {
+				clearInterval(interval) // Pause polling when tab is hidden
+			}
+		}
+
+		document.addEventListener('visibilitychange', handleVisibility)
+
+		return () => {
+			clearInterval(interval)
+			document.removeEventListener('visibilitychange', handleVisibility)
+		}
 	}, [])
 
 	const handleAccept = async (id) => {
