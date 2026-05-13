@@ -55,6 +55,13 @@ export default function ManageTasks() {
 
 	useEffect(() => {
 		fetchAll()
+
+		// Auto-refresh every 15 seconds so riders see new dispatched tasks immediately
+		const interval = setInterval(() => {
+			fetchAll()
+		}, 15000)
+
+		return () => clearInterval(interval)
 	}, [])
 
 	const handleAccept = async (id) => {
