@@ -44,6 +44,9 @@ app.use('/api/v1/rider', riderRoutes);
 // Mount Customer Routes
 app.use('/api/v1/customer', customerRoutes);
 
+// Mount Auth Routes
+app.use('/api/v1/auth', authRoutes);
+
 // --- Existing API Endpoints (Preserved) ---
 
 // 1. Register
@@ -64,12 +67,13 @@ app.post('/api/v1/auth/register', async (req, res) => {
     });
     if (error) return res.status(400).json({ error: error.message });
 
-    // Save phone number and full name to the profiles table
+    // Save phone number, full name, and email to the profiles table
     const userId = data.user?.id;
     if (userId) {
         const profileUpdate = {};
         if (metadata?.phone) profileUpdate.phone_number = metadata.phone;
         if (metadata?.full_name) profileUpdate.full_name = metadata.full_name;
+        if (email) profileUpdate.email = email;
 
         if (Object.keys(profileUpdate).length > 0) {
             const { error: profileError } = await supabase
@@ -87,8 +91,21 @@ app.post('/api/v1/auth/register', async (req, res) => {
 
 // 2. Login
 app.post('/api/v1/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { email, phone, password } = req.body;
+    let signInOptions = { password };
+    
+    if (email) {
+        signInOptions.email = email;
+    } else if (phone) {
+        let cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
+        else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;
+        signInOptions.phone = '+' + cleanPhone;
+    } else {
+        return res.status(400).json({ error: 'Email or Phone Number is required.' });
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
     if (error) return res.status(401).json({ error: error.message });
     res.status(200).json({ token: data.session.access_token, user: data.user });
 });
