@@ -27,6 +27,7 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState({});
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [legalModal, setLegalModal] = useState(null); // 'terms' | 'privacy' | null
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -332,7 +333,7 @@ export default function Signup() {
               {/* Terms and Conditions */}
               <p className="text-xs text-gray-500 my-4 text-center leading-relaxed">
                 By signing up, you agree to our <br />
-                <a href="#" className="font-bold text-[#4bad40] hover:underline">Terms and Conditions</a> and <a href="#" className="font-bold text-[#4bad40] hover:underline">Privacy Policy</a>
+                <button type="button" onClick={() => setLegalModal('terms')} className="font-bold text-[#4bad40] hover:underline bg-transparent border-none p-0 cursor-pointer">Terms and Conditions</button> and <button type="button" onClick={() => setLegalModal('privacy')} className="font-bold text-[#4bad40] hover:underline bg-transparent border-none p-0 cursor-pointer">Privacy Policy</button>
               </p>
 
               {/* Submit Button */}
@@ -365,6 +366,64 @@ export default function Signup() {
           </div>
         </div>
       </div>
+
+      {/* Legal Modal Overlay */}
+      {legalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">
+                {legalModal === 'terms' ? 'Terms and Conditions' : 'Privacy Policy'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setLegalModal(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto text-sm text-gray-600 space-y-4">
+              {legalModal === 'terms' ? (
+                <>
+                  <p>Welcome to Herland Laundry System. By using our services, you agree to the following terms and conditions:</p>
+                  <h4 className="font-bold text-gray-800 text-base">1. Services</h4>
+                  <p>We provide laundry services including wash, dry, and fold. We strive to handle your items with the utmost care.</p>
+                  <h4 className="font-bold text-gray-800 text-base">2. Liability</h4>
+                  <p>We are not liable for items that bleed, shrink, or tear due to normal wear and tear or manufacturer defects.</p>
+                  <h4 className="font-bold text-gray-800 text-base">3. Pick-up and Delivery</h4>
+                  <p>Customers must ensure they are available during scheduled pick-up and delivery times. Additional fees may apply for missed schedules.</p>
+                  <h4 className="font-bold text-gray-800 text-base">4. Payment</h4>
+                  <p>Payment must be settled upon delivery or pick-up of the completed laundry.</p>
+                </>
+              ) : (
+                <>
+                  <p>Herland Laundry System is committed to protecting your privacy. This Privacy Policy explains how we collect and use your information.</p>
+                  <h4 className="font-bold text-gray-800 text-base">1. Information Collection</h4>
+                  <p>We collect personal information such as your name, phone number, and address when you register and book our services.</p>
+                  <h4 className="font-bold text-gray-800 text-base">2. Use of Information</h4>
+                  <p>Your information is used solely for order processing, delivery, and communication regarding your laundry services.</p>
+                  <h4 className="font-bold text-gray-800 text-base">3. Data Security</h4>
+                  <p>We implement security measures to protect your personal data against unauthorized access or disclosure.</p>
+                  <h4 className="font-bold text-gray-800 text-base">4. Sharing</h4>
+                  <p>We do not sell or share your personal information with third parties except as necessary to fulfill our services (e.g., to our delivery riders).</p>
+                </>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setLegalModal(null)}
+                className="px-6 py-2 bg-[#3878c2] text-white font-medium rounded-lg hover:bg-[#2a5d99] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
