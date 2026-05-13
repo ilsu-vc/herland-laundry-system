@@ -133,7 +133,7 @@ export default function Notifications() {
           id: item.id,
           title: item.title,
           message: item.message,
-          read: item.read,
+          read: item.is_read,
           time: new Date(item.created_at).toLocaleString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric',
             hour: 'numeric', minute: '2-digit', hour12: true

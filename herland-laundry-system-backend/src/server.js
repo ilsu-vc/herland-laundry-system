@@ -208,7 +208,7 @@ app.patch('/api/v1/notifications/:id/read', requireAuth, async (req, res) => {
     const isRead = req.body.read !== undefined ? req.body.read : true;
     const { error } = await supabase
         .from('notifications')
-        .update({ read: isRead })
+        .update({ is_read: isRead })
         .eq('id', id)
         .eq('user_id', req.user.id);
     if (error) return res.status(500).json({ error: error.message });
@@ -219,9 +219,9 @@ app.patch('/api/v1/notifications/:id/read', requireAuth, async (req, res) => {
 app.patch('/api/v1/notifications/read-all', requireAuth, async (req, res) => {
     const { error } = await supabase
         .from('notifications')
-        .update({ read: true })
+        .update({ is_read: true })
         .eq('user_id', req.user.id)
-        .eq('read', false);
+        .eq('is_read', false);
     if (error) return res.status(500).json({ error: error.message });
     res.status(200).json({ success: true });
 });
