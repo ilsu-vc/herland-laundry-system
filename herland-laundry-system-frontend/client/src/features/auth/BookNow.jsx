@@ -218,7 +218,9 @@ export default function BookNow() {
           });
           if (response.ok) {
             const data = await response.json();
-            if (data.status.toLowerCase() !== "pending") {
+            const activeRole = window.sessionStorage.getItem("activeRole");
+            const isStaffOrAdmin = activeRole === "Admin" || activeRole === "Staff";
+            if (data.status.toLowerCase() !== "pending" && !isStaffOrAdmin) {
               showToast("Only pending bookings can be edited.", "error");
               navigate("/bookings");
               return;
@@ -268,7 +270,7 @@ export default function BookNow() {
       };
       fetchBooking();
     }
-  }, [isEditMode, editId]);
+  }, [isEditMode, editId, loadingServices, availableServices, availableAddons, navigate, showToast]);
 
   const steps = [
     "Select Services",
@@ -391,6 +393,8 @@ export default function BookNow() {
         {step === 1 && (
           <StepSelectServices
             onNext={() => handleStepChange(2)}
+            isEditMode={isEditMode}
+            onCancelEdit={() => navigate(`/bookings/${editId}`, { replace: true })}
             availableServices={availableServices}
             availableAddons={availableAddons}
             loading={loadingServices}
@@ -412,7 +416,7 @@ export default function BookNow() {
         {step === 2 && (
           <StepCollection
             onBack={() => setStep(1)}
-            onNext={() => handleStepChange(3)}
+            onNext={() => handleStepChange(isEditMode ? 4 : 3)}
             collectionInfo={collectionInfo}
             setCollectionInfo={setCollectionInfo}
             deliveryInfo={deliveryInfo}
@@ -457,7 +461,7 @@ export default function BookNow() {
         )}
         {step === 4 && (
           <StepReview
-            onBack={() => setStep(3)}
+            onBack={() => setStep(isEditMode ? 2 : 3)}
             availableServices={availableServices}
             availableAddons={availableAddons}
             services={services}
@@ -487,6 +491,8 @@ export default function BookNow() {
 ========================= */
 function StepSelectServices({
   onNext,
+  isEditMode,
+  onCancelEdit,
   availableServices,
   availableAddons,
   loading,
@@ -575,9 +581,19 @@ function StepSelectServices({
   return (
     <>
     <div className="px-0 sm:px-2">
-      <h2 className="text-lg font-semibold text-[#3878c2] mb-4 sm:text-xl">
-        Select Services
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-[#3878c2] sm:text-xl">
+          Select Services
+        </h2>
+        {isEditMode && (
+          <button
+            onClick={onCancelEdit}
+            className="rounded-lg border border-[#e55353] px-3 py-1 text-sm font-medium text-[#e55353] hover:bg-[#e55353]/5 transition"
+          >
+            Cancel Edit
+          </button>
+        )}
+      </div>
       
       {serviceError && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-pulse">
@@ -767,7 +783,7 @@ function QuantityInput({ value, onChange, allowDecimal, minValue = 0 }) {
       </button>
 
       <input
-        value={value}
+        value={value !== undefined ? value : ""}
         onChange={handleChange}
         onBlur={handleBlur}
         type="text"
@@ -1467,9 +1483,15 @@ function StepReview({
         {/* Collection & Delivery */}
         <div className="p-4 border rounded bg-[#ffffff] shadow-sm">
           <h3 className="font-semibold mb-4">Collection & Delivery</h3>
-          <div className="text-s mb-3">
-            <span className="font-medium">Mode:</span> {collectionInfo.optionLabel || "-"}
+          <div className="text-sm mb-3">
+            <span className="font-medium text-[#3878c2]">Mode:</span> <span className="text-[#374151]">{collectionInfo.optionLabel || "-"}</span>
           </div>
+          {customerLocation?.address && (
+            <div className="text-sm mb-4 flex gap-2">
+              <span className="font-medium text-[#3878c2] shrink-0">Address:</span> 
+              <span className="text-[#374151] break-words">{customerLocation.address}</span>
+            </div>
+          )}
 
           {/* Collection */}
           <div className="mb-3">

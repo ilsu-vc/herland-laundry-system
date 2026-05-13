@@ -27,8 +27,7 @@ const API_BASE = `${import.meta.env.VITE_API_URL}/api/v1/admin`;
 const STAGE_ACTIONS = {
   received: ["Accept Booking", "Cancel Booking"],
   payment: ["Confirm Payment", "Flag Payment"],
-  pickup: ["Dispatch Rider for Pickup"],  // Only for pickedUpDelivered
-  preparation: ["Start Laundry"],
+  preparation: ["Start Laundry"],  // Dynamically overridden for pickedUpDelivered
   shipping: [],  // Buttons are determined dynamically by collection option
   final: ["Complete Booking"],
   done: [],
@@ -50,7 +49,7 @@ const STAGE_BY_STATUS = {
   "Booking Received":              "received",
   "Booking Accepted":              "payment",
   "Booking Edited":                "payment",
-  "Payment Confirmed":             "preparation", // fallback; for pickedUpDelivered it will be "pickup"
+  "Payment Confirmed":             "preparation",
   "Payment Flagged":               "done",
   "Rider Dispatched for Pickup":   "preparation",
   "Picked Up from Customer":       "preparation",
@@ -71,9 +70,14 @@ const getButtonsForBooking = (booking) => {
     return ["Dispatch Rider for Delivery"]; // dropOffDelivered or pickedUpDelivered
   }
 
-  // At the pickup stage, only pickedUpDelivered bookings land here
-  if (booking.stage === "pickup") {
-    return ["Dispatch Rider for Pickup"];
+  // At the preparation stage, pickedUpDelivered bookings may need rider dispatch first
+  if (booking.stage === "preparation" && booking.collectionOption === "pickedUpDelivered") {
+    const hasRiderDispatched = booking.timeline?.some(
+      (entry) => entry.status === "Rider Dispatched for Pickup" || entry.status === "Picked Up from Customer"
+    );
+    if (!hasRiderDispatched) {
+      return ["Dispatch Rider for Pickup"];
+    }
   }
 
   return [...(STAGE_ACTIONS[booking.stage] || [])];
@@ -298,12 +302,10 @@ export default function ManageBookings() {
     }
 
     // Resolve dynamic nextStage for "Confirm Payment"
-    // pickedUpDelivered needs a pickup leg before laundry starts
+    // All payment confirmations go to "preparation" stage
     let resolvedNextStage = effect.nextStage;
     if (resolvedNextStage === "__dynamic__") {
-      resolvedNextStage = currentBooking?.collectionOption === "pickedUpDelivered"
-        ? "pickup"
-        : "preparation";
+      resolvedNextStage = "preparation";
     }
 
     // Build the updated timeline for the API call
@@ -344,7 +346,7 @@ export default function ManageBookings() {
       const token = session?.access_token;
       const dbId = currentBooking?.dbId || bookingId;
 
-      await fetch(`${API_BASE}/bookings/${dbId}/status`, {
+      const res = await fetch(`${API_BASE}/bookings/${dbId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -356,6 +358,11 @@ export default function ManageBookings() {
           timeline: updatedTimeline,
         }),
       });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.error('Status update failed:', res.status, errBody);
+      }
     } catch (error) {
       console.error('Failed to persist status update:', error);
     }
@@ -775,7 +782,11 @@ export default function ManageBookings() {
                 <h1 className="text-2xl font-semibold">Booking Details</h1>
                 <div className="ml-auto">
                   <button
-                    onClick={() => window.open(`/book?edit=${selectedBooking.id}`, '_blank')}
+                    onClick={async () => {
+                      if (await confirm("Are you sure you want to edit this booking?")) {
+                        navigate(`/book?edit=${selectedBooking.id}`);
+                      }
+                    }}
                     className="rounded-lg border border-[#3878c2] px-3 py-1.5 text-sm font-medium text-[#3878c2] hover:bg-[#3878c2]/5 transition"
                   >
                     Edit Booking

@@ -222,6 +222,8 @@ router.put('/bookings/:id/status', verifyRole(['Admin', 'Staff']), async (req, r
     const { id } = req.params;
     const { status, nextStage, timeline } = req.body;
 
+    console.log(`[Status Update] ID: ${id}, Status: "${status}", NextStage: "${nextStage}"`);
+
     if (!status || !nextStage) {
         return res.status(400).json({ error: 'status and nextStage are required' });
     }
@@ -272,14 +274,43 @@ router.put('/bookings/:id/status', verifyRole(['Admin', 'Staff']), async (req, r
             }
         }
 
+        console.log(`[Status Update] Sending to Supabase:`, JSON.stringify(updateData));
+
         const { error } = await supabase
             .from('bookings')
             .update(updateData)
             .eq('id', id);
 
         if (error) {
-            console.error(`Update Booking Status Error [ID: ${id}]:`, error.message);
+            console.error(`Update Booking Status Error [ID: ${id}]:`, error.message, error.details, error.hint, error.code);
             throw error;
+        }
+
+        // Send notification to the customer about the status change
+        try {
+            const { data: booking } = await supabase
+                .from('bookings')
+                .select('user_id, reference_number')
+                .eq('id', id)
+                .single();
+
+            if (booking?.user_id) {
+                const notificationService = require('../services/notificationService');
+                const eventMap = {
+                    'Booking Accepted': 'BOOKING_ACCEPTED',
+                    'In Progress': 'WASHING',
+                    'Ready for Pick-up': 'READY',
+                    'Out for Delivery': 'DELIVERY',
+                    'Booking Completed': 'COMPLETED',
+                    'Booking Cancelled': 'CANCELLED',
+                };
+                const eventType = eventMap[status] || null;
+                if (eventType) {
+                    notificationService.notify(booking.user_id, eventType, booking.reference_number || id);
+                }
+            }
+        } catch (notifErr) {
+            console.error('Notification send error (non-blocking):', notifErr.message);
         }
 
         res.json({ message: 'Booking status updated successfully' });
