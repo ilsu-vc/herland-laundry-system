@@ -82,8 +82,8 @@ export default function AppRoutes() {
 				<Route 
 					path="/book" 
 					element={
-						['Staff', 'Rider'].includes(window.sessionStorage.getItem('activeRole')) 
-							? <Navigate to={window.sessionStorage.getItem('activeRole') === 'Staff' ? '/staff' : '/rider'} replace /> 
+						['Rider'].includes(window.sessionStorage.getItem('activeRole')) 
+							? <Navigate to="/rider" replace /> 
 							: <BookNow />
 					} 
 				/>

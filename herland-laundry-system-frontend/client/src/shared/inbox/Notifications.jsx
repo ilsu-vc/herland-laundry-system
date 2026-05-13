@@ -106,11 +106,7 @@ export default function Notifications() {
   // we fetch them fully from the backend for the current user.
   const [filter, setFilter] = useState("All");
   const [notifications, setNotifications] = useState([]);
-  const [selectedNotification, setSelectedNotification] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  const pressTimer = useRef(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -164,11 +160,13 @@ export default function Notifications() {
 
   const toggleRead = async (id) => {
     const item = notifications.find(n => n.id === id);
-    if (!item || item.read) return; // Only process if unread
+    if (!item) return; 
     
+    const newReadState = !item.read;
+
     // Optimistic update
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, read: newReadState } : n))
     );
 
     try {
@@ -178,10 +176,14 @@ export default function Notifications() {
 
       await fetch(`${import.meta.env.VITE_API_URL}/api/v1/notifications/${id}/read`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ read: newReadState })
       });
     } catch (err) {
-      console.error("Failed to mark notification read:", err);
+      console.error("Failed to update notification read status:", err);
     }
   };
 
@@ -201,21 +203,8 @@ export default function Notifications() {
     }
   };
 
-  const startPressTimer = (item) => {
-    pressTimer.current = setTimeout(() => {
-      setSelectedNotification(item);
-      setIsModalOpen(true);
-    }, LONG_PRESS_DURATION);
-  };
-
-  const clearPressTimer = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-  };
-
   const deleteNotification = async (id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-    setIsModalOpen(false);
-    setSelectedNotification(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -227,14 +216,6 @@ export default function Notifications() {
       });
     } catch (err) {
       console.error("Failed to delete notification:", err);
-    }
-  };
-
-  const handleToggleRead = () => {
-    if (selectedNotification) {
-      toggleRead(selectedNotification.id);
-      setIsModalOpen(false);
-      setSelectedNotification(null);
     }
   };
 
@@ -313,18 +294,16 @@ export default function Notifications() {
         ) : (
           <ul className="divide-y">
             {filteredNotifications.map((item) => (
-              <li key={item.id}>
+              <li 
+                key={item.id} 
+                className={`w-full px-3 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition group ${
+                  item.read ? "bg-white" : "bg-[#63bce6]/10"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => toggleRead(item.id)}
-                  onMouseDown={() => startPressTimer(item)}
-                  onMouseUp={clearPressTimer}
-                  onMouseLeave={clearPressTimer}
-                  onTouchStart={() => startPressTimer(item)}
-                  onTouchEnd={clearPressTimer}
-                  className={`w-full px-3 py-4 text-left transition ${
-                    item.read ? "bg-white" : "bg-[#63bce6]/10"
-                  }`}
+                  className="text-left flex-1"
                 >
                   <h2
                     className={`text-sm transition-colors ${
@@ -344,58 +323,38 @@ export default function Notifications() {
                   </p>
                   <p className="mt-1 text-xs text-[#b4b4b4]">{item.time}</p>
                 </button>
+
+                {/* Action Icons */}
+                <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => toggleRead(item.id)}
+                    className="p-2 rounded-full hover:bg-black/5 text-[#3878c2]"
+                    title={item.read ? "Mark as unread" : "Mark as read"}
+                  >
+                    {item.read ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                        <circle cx="12" cy="12" r="3" fill="currentColor" />
+                      </svg>
+                    )}
+                  </button>
+                  <button 
+                    onClick={() => deleteNotification(item.id)}
+                    className="p-2 rounded-full hover:bg-red-50 text-[#e55353]"
+                    title="Delete"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                    </svg>
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
-        )}
-
-        {/* Long Press Modal */}
-        {isModalOpen && selectedNotification && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-sm rounded-lg bg-white p-6 text-center shadow-lg">
-              
-              <h3 className="mb-2 text-lg font-semibold text-[#3878c2]">
-                {selectedNotification.title}
-              </h3>
-
-              <p className="mb-6 text-sm text-[#374151]">
-                {selectedNotification.message}
-              </p>
-
-              <div className="flex flex-col gap-3">
-                
-                {/* Primary Action */}
-                <button
-                  onClick={handleToggleRead}
-                  className="w-full rounded-lg bg-[#4bad40] py-2.5 font-semibold text-white"
-                >
-                  {selectedNotification.read
-                    ? "Mark as unread"
-                    : "Mark as read"}
-                </button>
-
-                {/* Secondary Action */}
-                <button
-                  onClick={() => deleteNotification(selectedNotification.id)}
-                  className="w-full rounded-lg border border-[#3878c2] py-2.5 font-semibold text-[#3878c2]"
-                >
-                  Delete
-                </button>
-
-                {/* Secondary Action */}
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setSelectedNotification(null);
-                  }}
-                  className="w-full rounded-lg border border-[#3878c2] py-2.5 font-semibold text-[#3878c2]"
-                >
-                  Cancel
-                </button>
-
-              </div>
-            </div>
-          </div>
         )}
 
       </div>

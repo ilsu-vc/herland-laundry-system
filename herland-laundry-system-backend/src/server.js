@@ -202,12 +202,13 @@ app.get('/api/v1/notifications', requireAuth, async (req, res) => {
     res.status(200).json(data);
 });
 
-// 5. Mark Notification Read
+// 5. Mark Notification Read/Unread
 app.patch('/api/v1/notifications/:id/read', requireAuth, async (req, res) => {
     const { id } = req.params;
+    const isRead = req.body.read !== undefined ? req.body.read : true;
     const { error } = await supabase
         .from('notifications')
-        .update({ read: true })
+        .update({ read: isRead })
         .eq('id', id)
         .eq('user_id', req.user.id);
     if (error) return res.status(500).json({ error: error.message });
