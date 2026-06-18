@@ -282,7 +282,7 @@ export default function BookNow({ inlineEditId, onEditSuccess, onCancel }) {
       };
       fetchBooking();
     }
-  }, [isEditMode, editId]);
+  }, [isEditMode, editId, loadingServices]);
 
   const steps = [
     "Laundry Details",
