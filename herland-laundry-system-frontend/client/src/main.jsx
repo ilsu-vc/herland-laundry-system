@@ -92,49 +92,13 @@ function AppShell() {
       }
     })
 
-    // ── Global 401 Interceptor ──────────────────────────────────────
-    // If any API call returns 401, the session is dead. Auto-sign out
-    // and redirect to login instead of showing a broken dashboard.
-    const originalFetch = window.fetch
-    let isLoggingOut = false
-
-    window.fetch = async (...args) => {
-      const response = await originalFetch(...args)
-
-      if (response.status === 401 && !isLoggingOut) {
-        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || ''
-        // Only intercept our own API calls, not third-party requests
-        if (url.includes('/api/v1/')) {
-          isLoggingOut = true
-          console.warn('[Session] Token expired or invalid. Signing out automatically.')
-          window.sessionStorage.removeItem('activeRole')
-          await supabase.auth.signOut().catch(() => {})
-          navigate('/login', { replace: true })
-          // Reset flag after a short delay to allow the redirect to complete
-          setTimeout(() => { isLoggingOut = false }, 3000)
-        }
-      }
-
-      return response
-    }
-
     return () => {
       subscription.unsubscribe()
-      window.fetch = originalFetch // restore original fetch on unmount
     }
   }, [location.pathname, navigate, isPublicRoute, isRoleSwitcherRoute])
 
   useEffect(() => {
-    // Keep URL in sync with role for direct navigation
-    if (location.pathname.startsWith('/staff')) {
-      window.sessionStorage.setItem('activeRole', 'Staff')
-    } else if (location.pathname.startsWith('/rider')) {
-      window.sessionStorage.setItem('activeRole', 'Rider')
-    } else if (location.pathname.startsWith('/admin')) {
-      window.sessionStorage.setItem('activeRole', 'Admin')
-    }
-
-    // Reset window scroll position to the top whenever the page changes
+    // Scroll to top on route change
     window.scrollTo(0, 0)
   }, [location.pathname])
 

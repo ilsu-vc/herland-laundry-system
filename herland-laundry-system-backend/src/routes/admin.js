@@ -52,28 +52,40 @@ router.get('/feedback-reports', verifyRole('Admin'), async (req, res) => {
 // Route: Get total revenue and booking counts
 router.get('/dashboard-stats', verifyRole('Admin'), async (req, res) => {
     try {
-        // 1. Fetch all bookings
-        const { data: bookings, error } = await supabase
-            .from('bookings')
-            .select('status, payment_details');
+        // Fetch dashboard stats using a Postgres RPC to avoid the 1000 row truncation limit
+        const { data, error } = await supabase.rpc('get_dashboard_stats');
 
-        if (error) throw error;
+        if (error) {
+            // Fallback in case the user hasn't created the RPC yet
+            console.warn('RPC failed or missing, falling back to basic query:', error.message);
+            const { data: bookings, error: fallbackError } = await supabase
+                .from('bookings')
+                .select('status, payment_details')
+                .limit(1000); // Expose the limit so it's clear
 
-        // 2. Filter out cancelled bookings for general stats
-        const activeBookings = bookings.filter(b => b.status !== 'cancelled');
-        const completedBookings = bookings.filter(b => b.status === 'delivered' || b.status === 'completed');
-        
-        // 3. Calculate revenue from completed bookings
-        const totalRevenue = completedBookings.reduce((sum, b) => {
-            const amount = b.payment_details?.totalAmount || 0;
-            return sum + Number(amount);
-        }, 0);
+            if (fallbackError) throw fallbackError;
+
+            const activeBookings = bookings.filter(b => b.status !== 'cancelled');
+            const completedBookings = bookings.filter(b => b.status === 'delivered' || b.status === 'completed');
+            
+            const totalRevenue = completedBookings.reduce((sum, b) => {
+                const amount = b.payment_details?.totalAmount || 0;
+                return sum + Number(amount);
+            }, 0);
+
+            return res.json({
+                total_bookings: activeBookings.length,
+                completed_bookings: completedBookings.length,
+                estimated_revenue: totalRevenue,
+                formatted_revenue: `₱${totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            });
+        }
 
         res.json({
-            total_bookings: activeBookings.length,
-            completed_bookings: completedBookings.length,
-            estimated_revenue: totalRevenue,
-            formatted_revenue: `₱${totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            total_bookings: data.total_bookings,
+            completed_bookings: data.completed_bookings,
+            estimated_revenue: data.estimated_revenue,
+            formatted_revenue: `₱${data.estimated_revenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         });
 
     } catch (error) {
@@ -86,7 +98,7 @@ router.get('/dashboard-stats', verifyRole('Admin'), async (req, res) => {
 router.get('/users', verifyRole('Admin'), async (req, res) => {
     try {
         // Fetch auth users (has email and phone)
-        const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+        const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
         if (authError) throw authError;
 
         // Fetch profiles (has role, full_name)
@@ -132,6 +144,11 @@ router.put('/users/:id/role', verifyRole('Admin'), async (req, res) => {
 
     if (role && !['Customer', 'Staff', 'Rider', 'Admin'].includes(role)) {
         return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    // Security Check: Prevent an admin from demoting themselves and causing a system lockout
+    if (role && role !== 'Admin' && req.user.id === id) {
+        return res.status(403).json({ error: 'You cannot demote your own Admin account. Please have another Admin do this.' });
     }
 
     try {
@@ -560,7 +577,8 @@ router.put('/services/items/:id', verifyRole('Admin'), async (req, res) => {
             }
         }
 
-        if (type === 'load' && isNaN(parseInt(id))) {
+        const isDbId = /^\d+$/.test(id) || /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+        if (type === 'load' && !isDbId) {
             const { error: insertError } = await supabase
                 .from('service_items')
                 .insert({

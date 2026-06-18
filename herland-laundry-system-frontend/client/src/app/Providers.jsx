@@ -4,6 +4,7 @@ import { LayoutProvider } from './LayoutContext'
 import { PermissionsProvider } from '../shared/permissions/UsePermissions'
 import { ToastProvider } from '../shared/components/Toast';
 import { ConfirmationProvider } from '../shared/components/ConfirmationModal';
+import { AuthProvider } from './AuthContext';
 
 export default function Providers({ children }) {
 	const [hideBottomNav, setHideBottomNav] = useState(false)
@@ -13,9 +14,11 @@ export default function Providers({ children }) {
 			<ToastProvider>
 				<ConfirmationProvider>
 					<PermissionsProvider>
-						<LayoutProvider value={{ hideBottomNav, setHideBottomNav }}>
-							{children}
-						</LayoutProvider>
+						<AuthProvider>
+							<LayoutProvider value={{ hideBottomNav, setHideBottomNav }}>
+								{children}
+							</LayoutProvider>
+						</AuthProvider>
 					</PermissionsProvider>
 				</ConfirmationProvider>
 			</ToastProvider>

@@ -7,10 +7,14 @@ const notificationService = require('../services/notificationService');
 // Route: Update booking status (e.g., pending -> washing -> ready)
 router.patch('/update-status/:id', verifyRole('staff'), async (req, res) => {
     const { id } = req.params; // Get the booking ID from the URL
-    const { new_status } = req.body; // Get the new status from the frontend
+    const { new_status, timeline } = req.body; // Get the new status and timeline from the frontend
 
     // 1. List of valid statuses to prevent accidental typos in the database
-    const validStatuses = ['pending', 'picked_up', 'washing', 'ready', 'Delivery in Progress', 'delivered', 'In Progress'];
+    // Unified to support rider-specific statuses and legacy strings
+    const validStatuses = [
+        'pending', 'picked_up', 'washing', 'ready', 'Delivery in Progress', 'delivered', 'In Progress',
+        'Picked Up from Customer', 'Laundry Delivered'
+    ];
 
     if (!validStatuses.includes(new_status)) {
         return res.status(400).json({ error: 'Invalid status update' });
@@ -34,10 +38,15 @@ router.patch('/update-status/:id', verifyRole('staff'), async (req, res) => {
             }
         }
 
+        const updateData = { status: new_status };
+        if (timeline) {
+            updateData.timeline = timeline;
+        }
+
         // 2. Update the specific booking in Supabase
         const { data, error } = await supabase
             .from('bookings')
-            .update({ status: new_status })
+            .update(updateData)
             .eq('id', id)
             .select('*, profiles(full_name)')
             .single();

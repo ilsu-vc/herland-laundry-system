@@ -243,17 +243,7 @@ router.post('/book', requireAuth, async (req, res) => {
         // ────────────────────────────────────────────────────────────────────────
 
         let assignedRiderId = null;
-        if (option === 'pickedUpDelivered' || option === 'dropOffDelivered') {
-            const { data: riders } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('role', 'Rider');
-
-            if (riders && riders.length > 0) {
-                const randomIndex = Math.floor(Math.random() * riders.length);
-                assignedRiderId = riders[randomIndex].id;
-            }
-        }
+        // Rider auto-assignment removed. Bookings remain Unassigned until manually assigned by staff.
 
         const { data, error } = await supabase
             .from('bookings')

@@ -226,35 +226,7 @@ router.post('/lookup-email', async (req, res) => {
             }
         }
 
-        // --- Strategy 2: Search auth.users (phone field + user_metadata.phone) ---
-        // This catches accounts where phone_number was never saved to profiles
-        const { data: listData, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-
-        if (!listError && listData?.users) {
-            for (const user of listData.users) {
-                // Check the auth phone field (E.164 format like +639764705515)
-                const authPhone = (user.phone || '').replace(/\D/g, '');
-                // Check user_metadata.phone (could be 09764705515 format)
-                const metaPhone = (user.user_metadata?.phone || '').replace(/\D/g, '');
-
-                const authMatches = authPhone && variants.includes(authPhone);
-                const metaMatches = metaPhone && variants.includes(metaPhone);
-
-                if (authMatches || metaMatches) {
-                    if (user.email) {
-                        // Backfill email and phone into profiles for future direct lookups
-                        const phoneToStore = metaPhone ? ('0' + (metaPhone.startsWith('63') ? metaPhone.substring(2) : metaPhone)) : cleanPhone;
-                        await supabase.from('profiles').upsert(
-                            { id: user.id, email: user.email, phone_number: phoneToStore },
-                            { onConflict: 'id' }
-                        );
-                        return res.status(200).json({ email: user.email });
-                    }
-                }
-            }
-        }
-
-        console.log('Phone lookup failed for all strategies. Tried variants:', variants);
+        console.log('Phone lookup failed for Strategy 1. Tried variants:', variants);
         return res.status(404).json({ error: 'No account found with this mobile number.' });
     } catch (err) {
         console.error('Lookup Email Error:', err.message);
