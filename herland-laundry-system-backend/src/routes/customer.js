@@ -537,7 +537,14 @@ router.patch('/my-bookings/:id/cancel', requireAuth, async (req, res) => {
     const { id } = req.params;
 
     try {
-        const booking = await getBookingByIdOrRef(id, req.user.id);
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', req.user.id)
+            .maybeSingle();
+
+        const hasBypass = profile?.role === 'Admin' || profile?.role === 'Staff';
+        const booking = await getBookingByIdOrRef(id, req.user.id, hasBypass);
 
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
@@ -566,7 +573,7 @@ router.patch('/my-bookings/:id/cancel', requireAuth, async (req, res) => {
         res.json({ message: 'Booking cancelled successfully' });
 
         // Send Notification
-        notificationService.notify(req.user.id, 'CANCELLED', booking.reference_number || booking.id);
+        notificationService.notify(booking.user_id, 'CANCELLED', booking.reference_number || booking.id);
     } catch (error) {
         console.error('Cancel Booking Error:', error.message);
         res.status(500).json({ error: 'Failed to cancel booking' });
@@ -585,7 +592,14 @@ router.patch('/my-bookings/:id/update', requireAuth, async (req, res) => {
     } = req.body;
 
     try {
-        const booking = await getBookingByIdOrRef(id, req.user.id);
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', req.user.id)
+            .maybeSingle();
+
+        const hasBypass = profile?.role === 'Admin' || profile?.role === 'Staff';
+        const booking = await getBookingByIdOrRef(id, req.user.id, hasBypass);
 
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
@@ -596,12 +610,14 @@ router.patch('/my-bookings/:id/update', requireAuth, async (req, res) => {
         }
 
         // ─── 15-minute edit window enforcement ──────────────────────────────
-        const EDIT_WINDOW_MS = 15 * 60 * 1000;
-        const createdAt = new Date(booking.created_at).getTime();
-        if (Date.now() - createdAt > EDIT_WINDOW_MS) {
-            return res.status(403).json({
-                error: 'The 15-minute editing window has expired. This booking can no longer be modified.'
-            });
+        if (!hasBypass) {
+            const EDIT_WINDOW_MS = 15 * 60 * 1000;
+            const createdAt = new Date(booking.created_at).getTime();
+            if (Date.now() - createdAt > EDIT_WINDOW_MS) {
+                return res.status(403).json({
+                    error: 'The 15-minute editing window has expired. This booking can no longer be modified.'
+                });
+            }
         }
         // ────────────────────────────────────────────────────────────────────
 
@@ -679,7 +695,7 @@ router.patch('/my-bookings/:id/update', requireAuth, async (req, res) => {
         res.json({ message: 'Booking updated successfully' });
 
         // Send Notification
-        notificationService.notify(req.user.id, 'UPDATED', booking.reference_number || booking.id);
+        notificationService.notify(booking.user_id, 'UPDATED', booking.reference_number || booking.id);
     } catch (error) {
         console.error('Update Booking Error:', error.message);
         res.status(500).json({ error: 'Failed to update booking' });

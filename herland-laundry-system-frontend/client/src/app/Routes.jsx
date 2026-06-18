@@ -98,6 +98,10 @@ export default function AppRoutes() {
 					<Route path="/user/book-now" element={<BookNow />} />
 					<Route path="/user/bookings" element={<BookingHistory />} />
 					<Route path="/user/notifications" element={<Notifications />} />
+				</Route>
+
+				{/* Shared Booking Routes */}
+				<Route element={<ProtectedRoute allowedRoles={['Customer', 'Admin', 'Staff', 'Employee']} />}>
 					<Route path="/book" element={<BookNow />} />
 					<Route path="/payment" element={<PaymentForm />} />
 				</Route>
