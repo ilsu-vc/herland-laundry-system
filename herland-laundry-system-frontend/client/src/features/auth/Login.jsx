@@ -133,10 +133,11 @@ export default function Login() {
             window.sessionStorage.setItem('activeRole', role);
             window.localStorage.setItem('currentUserId', userId);
 
-            if (role === 'Admin') navigate('/admin');
-            else if (role === 'Staff') navigate('/staff');
-            else if (role === 'Rider') navigate('/rider');
-            else navigate('/user');
+            // Force hard redirect to prevent race condition with AuthContext and ProtectedRoute
+            if (role === 'Admin') window.location.href = '/admin';
+            else if (role === 'Staff') window.location.href = '/staff';
+            else if (role === 'Rider') window.location.href = '/rider';
+            else window.location.href = '/dashboard';
             return;
           }
 
@@ -174,11 +175,11 @@ export default function Login() {
       window.sessionStorage.setItem('activeRole', role);
       window.localStorage.setItem('currentUserId', userId);
 
-      // Redirect based on role
-      if (role === 'Admin') navigate('/admin');
-      else if (role === 'Staff') navigate('/staff');
-      else if (role === 'Rider') navigate('/rider');
-      else navigate('/user');
+      // Force hard redirect to prevent race condition with AuthContext and ProtectedRoute
+      if (role === 'Admin') window.location.href = '/admin';
+      else if (role === 'Staff') window.location.href = '/staff';
+      else if (role === 'Rider') window.location.href = '/rider';
+      else window.location.href = '/dashboard';
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {

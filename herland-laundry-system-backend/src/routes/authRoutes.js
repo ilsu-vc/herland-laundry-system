@@ -62,7 +62,7 @@ router.post('/register', async (req, res) => {
         // If email is provided, use it
         if (email && email.trim() !== '') {
             signUpOptions.email = email;
-            signUpOptions.options.emailRedirectTo = 'http://localhost:5173/login';
+            signUpOptions.options.emailRedirectTo = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
         } else if (phone) {
             // If no email, try phone. Supabase requires E.164 format (e.g., +639...)
             // Assuming input is 09xxxxxxxxx, convert to +639xxxxxxxxx
@@ -136,12 +136,11 @@ router.post('/forgot-password', async (req, res) => {
     try {
         if (email) {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: 'http://localhost:5173/reset-password',
+                redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password`,
             });
             if (error) throw error;
             return res.status(200).json({ message: 'Password reset link sent to your email.' });
         } else if (phone) {
-            // For phone, we send an OTP
             let cleanPhone = phone.replace(/\D/g, '');
             if (cleanPhone.startsWith('09')) cleanPhone = '63' + cleanPhone.substring(1);
             else if (cleanPhone.length === 10 && cleanPhone.startsWith('9')) cleanPhone = '63' + cleanPhone;

@@ -45,6 +45,7 @@ const customerSections = [
   {
     title: 'MAIN',
     items: [
+      { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
       { label: 'Book Now', path: '/book', icon: 'bookNow' },
       { label: 'My Bookings', path: '/user/bookings', icon: 'bookings' },
     ],
