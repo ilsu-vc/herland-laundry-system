@@ -340,26 +340,29 @@ router.get('/my-bookings', requireAuth, async (req, res) => {
 
 // ─── Helper: find a booking by reference_number or ID ──────────────────────────
 async function getBookingByIdOrRef(id, userId, hasBypass = false) {
-    // 1. Check if it's a numeric ID
-    const isNumeric = /^\d+$/.test(id);
-    
     let query = supabase.from('bookings').select('*');
-    
-    // 2. Build OR filter
-    if (isNumeric) {
-        query = query.or(`reference_number.eq.${id},id.eq.${id}`);
-    } else {
-        query = query.eq('reference_number', id);
-    }
-
-    // 3. Ownership check if not bypassed
     if (!hasBypass) {
         query = query.eq('user_id', userId);
     }
 
-    const { data, error } = await query.maybeSingle();
-    if (error) console.error('[DEBUG] getBookingByIdOrRef error:', error);
-    return data;
+    // Try finding by reference_number first
+    const { data: refData, error: refError } = await query.eq('reference_number', id).maybeSingle();
+    if (refData) return refData;
+
+    // If not found, and id looks like a number or UUID, try finding by id
+    // This avoids Postgres type errors if id is UUID but we pass a numeric reference_number
+    if (/^\d+$/.test(id) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        // We have to rebuild the query because Supabase query objects are mutated
+        let idQuery = supabase.from('bookings').select('*').eq('id', id);
+        if (!hasBypass) idQuery = idQuery.eq('user_id', userId);
+        
+        const { data: idData, error: idError } = await idQuery.maybeSingle();
+        if (idError) console.error('[DEBUG] getBookingByIdOrRef id query error:', idError.message);
+        return idData;
+    }
+
+    if (refError) console.error('[DEBUG] getBookingByIdOrRef ref query error:', refError.message);
+    return null;
 }
 
 // ─── Get a single booking ──────────────────────────────────────────────────────
@@ -374,7 +377,8 @@ router.get('/my-bookings/:id', requireAuth, async (req, res) => {
             .eq('id', req.user.id)
             .maybeSingle();
 
-        const hasBypass = profile?.role === 'Admin' || profile?.role === 'Staff';
+        const role = profile?.role?.toLowerCase();
+        const hasBypass = role === 'admin' || role === 'staff';
         let booking = null;
 
         if (hasBypass || profile?.role === 'Rider') {
@@ -543,7 +547,8 @@ router.patch('/my-bookings/:id/cancel', requireAuth, async (req, res) => {
             .eq('id', req.user.id)
             .maybeSingle();
 
-        const hasBypass = profile?.role === 'Admin' || profile?.role === 'Staff';
+        const role = profile?.role?.toLowerCase();
+        const hasBypass = role === 'admin' || role === 'staff';
         const booking = await getBookingByIdOrRef(id, req.user.id, hasBypass);
 
         if (!booking) {
@@ -598,7 +603,8 @@ router.patch('/my-bookings/:id/update', requireAuth, async (req, res) => {
             .eq('id', req.user.id)
             .maybeSingle();
 
-        const hasBypass = profile?.role === 'Admin' || profile?.role === 'Staff';
+        const role = profile?.role?.toLowerCase();
+        const hasBypass = role === 'admin' || role === 'staff';
         const booking = await getBookingByIdOrRef(id, req.user.id, hasBypass);
 
         if (!booking) {
